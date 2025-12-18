@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <LangVersion>latestmajor</LangVersion>
+        <Nullable>enable</Nullable>
+        <RootNamespace>RoboSouls.JudgeSystem.RoboMaster2025UC</RootNamespace>
+        <AssemblyName>RoboSouls.JudgeSystem.RoboMaster2025UC</AssemblyName>
+        <TargetFrameworks>netstandard2.1;net8.0</TargetFrameworks>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Core\Core.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Reference Include="VContainer">
+        <HintPath>..\Lib\VContainer.dll</HintPath>
+      </Reference>
+    </ItemGroup>
+
+</Project>

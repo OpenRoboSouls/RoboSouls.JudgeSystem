@@ -1,0 +1,6 @@
+﻿syntax = "proto3";
+package client;
+
+option go_package = "github.com/openrobosouls/rmproto/v2026/serialport";
+option csharp_namespace = "RoboSouls.JudgeSystem.RoboMaster2026UC.Proto";
+

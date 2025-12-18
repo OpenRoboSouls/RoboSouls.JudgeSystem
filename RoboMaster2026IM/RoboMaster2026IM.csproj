@@ -1,0 +1,11 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <LangVersion>latestmajor</LangVersion>
+        <Nullable>enable</Nullable>
+        <AssemblyName>RoboSouls.JudgeSystem.RoboMaster2026IM</AssemblyName>
+        <RootNamespace>RoboSouls.JudgeSystem.RoboMaster2026IM</RootNamespace>
+    </PropertyGroup>
+
+</Project>

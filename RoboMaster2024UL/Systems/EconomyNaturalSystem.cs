@@ -1,0 +1,46 @@
+using System.Threading;
+using System.Threading.Tasks;
+using RoboSouls.JudgeSystem.Systems;
+using VContainer;
+
+namespace RoboSouls.JudgeSystem.RoboMaster2024UL.Systems;
+
+/// <summary>
+/// 经济自然增长
+/// 5:00 - 200
+/// 4:00 - 200
+/// 3:00 - 200
+/// 2:00 - 300
+/// 1:00 - 400
+/// </summary>
+public sealed class EconomyNaturalSystem : ISystem
+{
+    [Inject]
+    internal EconomySystem EconomySystem { get; set; }
+
+    [Inject]
+    internal ITimeSystem TimeSystem { get; set; }
+
+    [Inject]
+    internal ILogger Logger { get; set; }
+
+    public Task Reset(CancellationToken cancellation = new CancellationToken())
+    {
+        TimeSystem.RegisterOnceAction(JudgeSystemStage.Match, 0, () => BothSideAddMoney(200));
+        TimeSystem.RegisterOnceAction(JudgeSystemStage.Match, 60, () => BothSideAddMoney(200));
+        TimeSystem.RegisterOnceAction(JudgeSystemStage.Match, 120, () => BothSideAddMoney(200));
+        TimeSystem.RegisterOnceAction(JudgeSystemStage.Match, 180, () => BothSideAddMoney(300));
+        TimeSystem.RegisterOnceAction(JudgeSystemStage.Match, 240, () => BothSideAddMoney(400));
+
+        return Task.CompletedTask;
+    }
+
+    private Task BothSideAddMoney(int money)
+    {
+        Logger.Info($"[EconomyNatural] Both side add money: {money}");
+        EconomySystem.RedCoin += money;
+        EconomySystem.BlueCoin += money;
+
+        return Task.CompletedTask;
+    }
+}

@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <LangVersion>latestmajor</LangVersion>
+        <Nullable>enable</Nullable>
+        <RootNamespace>RoboSouls.JudgeSystem</RootNamespace>
+        <AssemblyName>RoboSouls.JudgeSystem.Core</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="VitalRouter" Version="2.0.4" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Reference Include="VContainer">
+        <HintPath>..\Lib\VContainer.dll</HintPath>
+      </Reference>
+      <Reference Include="VContainer.SourceGenerator">
+        <HintPath>..\Lib\VContainer.SourceGenerator.dll</HintPath>
+      </Reference>
+    </ItemGroup>
+
+</Project>
