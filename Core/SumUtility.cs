@@ -24,12 +24,12 @@ public static class SumUtility
         return sum;
     }
 
-    private static readonly SHA256 SHA256 = SHA256.Create();
+    private static readonly SHA256 Sha256 = SHA256.Create();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int SumSha256(string s, int seed = 0)
     {
-        var h = SHA256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(s));
+        var h = Sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(s));
         return BitConverter.ToInt32(h, 0) + seed;
     }
 }

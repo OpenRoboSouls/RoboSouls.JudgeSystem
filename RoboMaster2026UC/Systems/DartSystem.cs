@@ -13,7 +13,21 @@ using VitalRouter;
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 
 [Routes]
-public sealed partial class DartSystem : ISystem
+public sealed partial class DartSystem(
+    ICacheProvider<byte> byteCacheBox,
+    ICacheProvider<int> intCacheBox,
+    ICacheProvider<double> doubleCacheBox,
+    EntitySystem entitySystem,
+    ITimeSystem timeSystem,
+    ICommandPublisher commandPublisher,
+    ILogger logger,
+    IMatchConfigurationRM2026uc matchConfiguration,
+    BuffSystem buffSystem,
+    LifeSystem lifeSystem,
+    PerformanceSystemBase performanceSystem,
+    BaseSystem baseSystem,
+    BattleSystem battleSystem)
+    : ISystem
 {
     [Inject]
     internal void Inject(Router router)
@@ -33,48 +47,6 @@ public sealed partial class DartSystem : ISystem
     // client does not need to know
     private readonly DartCounter _blueDartCounter = new DartCounter();
     private readonly DartCounter _redDartCounter = new DartCounter();
-
-    [Inject]
-    internal ICacheProvider<byte> ByteCacheBox { get; set; }
-
-    [Inject]
-    internal ICacheProvider<int> IntCacheBox { get; set; }
-
-    [Inject]
-    internal ICacheProvider<double> DoubleCacheBox { get; set; }
-
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
-
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
-
-    [Inject]
-    internal ICommandPublisher CommandPublisher { get; set; }
-
-    [Inject]
-    internal ILogger Logger { get; set; }
-
-    [Inject]
-    internal IMatchConfigurationRM2026uc MatchConfiguration { get; set; }
-
-    [Inject]
-    internal BuffSystem BuffSystem { get; set; }
-
-    [Inject]
-    internal LifeSystem LifeSystem { get; set; }
-
-    [Inject]
-    internal PerformanceSystemBase PerformanceSystem { get; set; }
-
-    [Inject]
-    internal BaseSystem BaseSystem { get; set; }
-
-    [Inject]
-    internal BattleSystem BattleSystem { get; set; }
-
-    [Inject]
-    internal ModuleSystem ModuleSystem { get; set; }
 
     public Task Reset(CancellationToken cancellation = new CancellationToken())
     {
@@ -110,9 +82,9 @@ public sealed partial class DartSystem : ISystem
             _ => throw new ArgumentOutOfRangeException(),
         };
 
-        if (EntitySystem.TryGetEntity<Outpost>(outpostId, out var outpost) && outpost.IsDead())
+        if (entitySystem.TryGetEntity<Outpost>(outpostId, out var outpost) && outpost.IsDead())
         {
-            return ByteCacheBox
+            return byteCacheBox
                 .WithReaderNamespace(dartStationId)
                 .TryLoad(DartTargetCacheKey, out var value)
                 ? (DartTarget)value
@@ -129,23 +101,23 @@ public sealed partial class DartSystem : ISystem
     /// <returns></returns>
     public bool CanSwitchDartTarget(Camp camp)
     {
-        return TimeSystem.Stage == JudgeSystemStage.Match
-               && TimeSystem.StageTimeElapsed - GetLastDartStationOpenTime(camp) > 7 + 20 + 15
+        return timeSystem.Stage == JudgeSystemStage.Match
+               && timeSystem.StageTimeElapsed - GetLastDartStationOpenTime(camp) > 7 + 20 + 15
                && GetDartRemaining(camp) > 0;
     }
 
     public double GetTimeBeforeDartStationClose(Camp camp)
     {
-        var t = 7 + 20 - (TimeSystem.StageTimeElapsed - GetLastDartStationOpenTime(camp));
+        var t = 7 + 20 - (timeSystem.StageTimeElapsed - GetLastDartStationOpenTime(camp));
         return Math.Max(t, 0);
     }
 
     public DartStationStatus GetStatus(Camp camp)
     {
-        if (TimeSystem.Stage != JudgeSystemStage.Match)
+        if (timeSystem.Stage != JudgeSystemStage.Match)
             return DartStationStatus.CoolingDown;
         var lastOpenTime = GetLastDartStationOpenTime(camp);
-        var duration = TimeSystem.StageTimeElapsed - lastOpenTime;
+        var duration = timeSystem.StageTimeElapsed - lastOpenTime;
         switch (duration)
         {
             case < 7:
@@ -180,7 +152,7 @@ public sealed partial class DartSystem : ISystem
             _ => throw new ArgumentOutOfRangeException(),
         };
 
-        if (EntitySystem.TryGetEntity<Outpost>(outpostId, out var outpost) && outpost.IsDead())
+        if (entitySystem.TryGetEntity<Outpost>(outpostId, out var outpost) && outpost.IsDead())
         {
             var newTarget = GetCurrentTarget(camp) switch
             {
@@ -218,9 +190,9 @@ public sealed partial class DartSystem : ISystem
             _ => throw new ArgumentOutOfRangeException(),
         };
 
-        ByteCacheBox.WithWriterNamespace(dartStationId).Save(DartTargetCacheKey, (byte)target);
+        byteCacheBox.WithWriterNamespace(dartStationId).Save(DartTargetCacheKey, (byte)target);
 
-        Logger.Info($"{camp} switched dart target to {target}");
+        logger.Info($"{camp} switched dart target to {target}");
     }
 
     /// <summary>
@@ -236,7 +208,7 @@ public sealed partial class DartSystem : ISystem
             Camp.Red => RedDartStationId,
             _ => throw new ArgumentOutOfRangeException(),
         };
-        return IntCacheBox
+        return intCacheBox
             .WithReaderNamespace(dartStationId)
             .TryLoad(DartRemainingCacheKey, out var value)
             ? value
@@ -251,7 +223,7 @@ public sealed partial class DartSystem : ISystem
             Camp.Red => RedDartStationId,
             _ => throw new ArgumentOutOfRangeException(),
         };
-        IntCacheBox.WithWriterNamespace(dartStationId).Save(DartRemainingCacheKey, value);
+        intCacheBox.WithWriterNamespace(dartStationId).Save(DartRemainingCacheKey, value);
     }
 
     /// <summary>
@@ -267,7 +239,7 @@ public sealed partial class DartSystem : ISystem
             Camp.Red => RedDartStationId,
             _ => throw new ArgumentOutOfRangeException(),
         };
-        var v = DoubleCacheBox
+        var v = doubleCacheBox
             .WithReaderNamespace(dartStationId)
             .Load(LastDartStationOpenTimeCacheKey);
         if (v <= 0)
@@ -286,7 +258,7 @@ public sealed partial class DartSystem : ISystem
             Camp.Red => RedDartStationId,
             _ => throw new ArgumentOutOfRangeException(),
         };
-        DoubleCacheBox
+        doubleCacheBox
             .WithWriterNamespace(dartStationId)
             .Save(LastDartStationOpenTimeCacheKey, value);
     }
@@ -300,7 +272,7 @@ public sealed partial class DartSystem : ISystem
             _ => throw new ArgumentOutOfRangeException(),
         };
 
-        return IntCacheBox.WithReaderNamespace(id).Load(DartStationOpenedCountCacheKey);
+        return intCacheBox.WithReaderNamespace(id).Load(DartStationOpenedCountCacheKey);
     }
 
     private void SetDartStationOpenedCount(Camp camp, int value)
@@ -312,7 +284,7 @@ public sealed partial class DartSystem : ISystem
             _ => throw new ArgumentOutOfRangeException(),
         };
 
-        IntCacheBox.WithWriterNamespace(id).Save(DartStationOpenedCountCacheKey, value);
+        intCacheBox.WithWriterNamespace(id).Save(DartStationOpenedCountCacheKey, value);
     }
 
     /// <summary>
@@ -321,12 +293,12 @@ public sealed partial class DartSystem : ISystem
     /// <returns></returns>
     public int GetDartStationOpenCountAllowed()
     {
-        if (TimeSystem.Stage is not JudgeSystemStage.Match)
+        if (timeSystem.Stage is not JudgeSystemStage.Match)
             return 0;
 
-        if (TimeSystem.StageTimeElapsed > 240)
+        if (timeSystem.StageTimeElapsed > 240)
             return 2;
-        else if (TimeSystem.StageTimeElapsed > 30)
+        else if (timeSystem.StageTimeElapsed > 30)
             return 1;
 
         return 0;
@@ -334,18 +306,18 @@ public sealed partial class DartSystem : ISystem
 
     public double GetTimeBeforeNextOpenCountAllowance()
     {
-        if (TimeSystem.Stage is not JudgeSystemStage.Match)
+        if (timeSystem.Stage is not JudgeSystemStage.Match)
             return 0;
 
-        if (TimeSystem.StageTimeElapsed > 30)
-            return Math.Max(0, 240 - TimeSystem.StageTimeElapsed);
+        if (timeSystem.StageTimeElapsed > 30)
+            return Math.Max(0, 240 - timeSystem.StageTimeElapsed);
 
-        return Math.Max(0, 30 - TimeSystem.StageTimeElapsed);
+        return Math.Max(0, 30 - timeSystem.StageTimeElapsed);
     }
 
     public double GetTimeBeforeDartStationCooldownComplete(Camp camp)
     {
-        var duration = TimeSystem.StageTimeElapsed - GetLastDartStationOpenTime(camp);
+        var duration = timeSystem.StageTimeElapsed - GetLastDartStationOpenTime(camp);
 
         return Math.Max(0, 7 + 20 + 5 + 15 - duration);
     }
@@ -370,32 +342,32 @@ public sealed partial class DartSystem : ISystem
         // 闸门完全开启耗时约 7 秒
         // 当发射站闸门完全开启后，云台手可通过控制飞镖系统发射飞镖，时长为 20 秒
         // 当发射站第一次关闭闸门后，飞镖发射站将会进入 15 秒的冷却期。冷却期结束后，方可第二次开启闸门。 冷却期间，飞镖发射站闸门不可开启
-        if (TimeSystem.Stage != JudgeSystemStage.Match)
+        if (timeSystem.Stage != JudgeSystemStage.Match)
             return false;
         if (GetDartStationOpenCountRemaining(camp) <= 0)
             return false;
         var lastOpenTime = GetLastDartStationOpenTime(camp);
-        if (TimeSystem.StageTimeElapsed - lastOpenTime < 7 + 20 + 15)
+        if (timeSystem.StageTimeElapsed - lastOpenTime < 7 + 20 + 15)
             return false;
 
-        SetLastDartStationOpenTime(camp, TimeSystem.StageTimeElapsed);
+        SetLastDartStationOpenTime(camp, timeSystem.StageTimeElapsed);
         SetDartStationOpenedCount(camp, GetDartStationOpenedCount(camp) + 1);
 
         var target = GetCurrentTarget(camp);
-        Logger.Info(
+        logger.Info(
             $"{camp} opened dart station, remaining count: {GetDartStationOpenCountRemaining(camp)}, target: {target}"
         );
 
-        CommandPublisher.PublishAsync(new DartStationOpenEvent(camp, target));
+        commandPublisher.PublishAsync(new DartStationOpenEvent(camp, target));
 
-        var now = TimeSystem.StageTimeElapsed;
-        TimeSystem.RegisterOnceAction(
+        var now = timeSystem.StageTimeElapsed;
+        timeSystem.RegisterOnceAction(
             JudgeSystemStage.Match,
             now + 7 + 20,
             () =>
             {
-                Logger.Info($"{camp} closed dart station");
-                CommandPublisher.PublishAsync(new DartStationCloseEvent(camp));
+                logger.Info($"{camp} closed dart station");
+                commandPublisher.PublishAsync(new DartStationCloseEvent(camp));
             }
         );
 
@@ -412,49 +384,49 @@ public sealed partial class DartSystem : ISystem
     /// <returns></returns>
     public bool TryLaunchDart(Camp camp)
     {
-        if (TimeSystem.Stage != JudgeSystemStage.Match)
+        if (timeSystem.Stage != JudgeSystemStage.Match)
             return false;
         if (GetDartRemaining(camp) <= 0)
             return false;
         var lastOpenTime = GetLastDartStationOpenTime(camp);
-        if (TimeSystem.StageTimeElapsed - lastOpenTime < 7)
+        if (timeSystem.StageTimeElapsed - lastOpenTime < 7)
             return false;
-        if (TimeSystem.StageTimeElapsed - lastOpenTime > 7 + 20)
+        if (timeSystem.StageTimeElapsed - lastOpenTime > 7 + 20)
             return false;
         if (
-            TimeSystem.StageTimeElapsed - _lastFireTime
+            timeSystem.StageTimeElapsed - _lastFireTime
             < RM2026ucPerformanceSystem.DartFireInterval
         )
             return false;
 
         var target = GetCurrentTarget(camp);
         var dartIndex = RM2026ucPerformanceSystem.MaxDartCount - GetDartRemaining(camp);
-        var hitRate = MatchConfiguration.GetDartHitRate(camp);
-        var hit = MatchConfiguration.Random.NextDouble() < hitRate;
+        var hitRate = matchConfiguration.GetDartHitRate(camp);
+        var hit = matchConfiguration.Random.NextDouble() < hitRate;
 
-        Logger.Info($"{camp} launched dart, target: {target}, hit rate: {hitRate}, hit: {hit}");
+        logger.Info($"{camp} launched dart, target: {target}, hit rate: {hitRate}, hit: {hit}");
 
         var dartId = new Identity(camp, _lastDartId);
         _lastDartId++;
-        CommandPublisher.PublishAsync(new DartLaunchEvent(target, dartId, TimeSystem.Time));
+        commandPublisher.PublishAsync(new DartLaunchEvent(target, dartId, timeSystem.Time));
         SetDartRemaining(camp, GetDartRemaining(camp) - 1);
 
         if (!hit)
             return true;
-        var now = TimeSystem.StageTimeElapsed;
-        TimeSystem.RegisterOnceAction(
+        var now = timeSystem.StageTimeElapsed;
+        timeSystem.RegisterOnceAction(
             JudgeSystemStage.Match,
             now + RM2026ucPerformanceSystem.DartFlyDuration,
             () =>
             {
                 if (_interceptedDarts.TryGetValue(dartId, out var intercepted) && intercepted)
                 {
-                    Logger.Info($"{camp} dart intercepted");
+                    logger.Info($"{camp} dart intercepted");
                     return;
                 }
 
-                Logger.Info($"{camp} dart hit target");
-                CommandPublisher.PublishAsync(new DartHitEvent(camp, target));
+                logger.Info($"{camp} dart hit target");
+                commandPublisher.PublishAsync(new DartHitEvent(camp, target));
             }
         );
 
@@ -467,7 +439,7 @@ public sealed partial class DartSystem : ISystem
     public void OnDartIntercepted(Identity dartId)
     {
         _interceptedDarts[dartId] = true;
-        Logger.Info($"Dart {dartId} intercepted");
+        logger.Info($"Dart {dartId} intercepted");
     }
 
     /// <summary>
@@ -531,24 +503,24 @@ public sealed partial class DartSystem : ISystem
         }
 
         await Task.WhenAll(
-            EntitySystem
+            entitySystem
                 .GetOperatedEntities<IRobot>(e.Camp.GetOppositeCamp())
                 .Select(r =>
                 {
                     var duration = dartHitBuffDuration;
 
                     if (
-                        BuffSystem.TryGetBuff(
+                        buffSystem.TryGetBuff(
                             r.Id,
                             RM2026ucBuffs.DartHitBuff,
                             out Buff existing
                         )
                     )
                     {
-                        duration += (int)(existing.EndTime - TimeSystem.Time);
+                        duration += (int)(existing.EndTime - timeSystem.Time);
                     }
 
-                    BuffSystem.AddBuff(
+                    buffSystem.AddBuff(
                         r.Id,
                         RM2026ucBuffs.DartHitBuff,
                         1,
@@ -569,12 +541,12 @@ public sealed partial class DartSystem : ISystem
         if (e.Target == DartTarget.RandomFixed)
         {
             await Task.WhenAll(
-                EntitySystem
+                entitySystem
                     .GetOperatedEntities<IHealthed>(e.Camp)
                     .Select(r =>
                     {
-                        var damage = (uint)(PerformanceSystem.GetMaxHealth(r) * 0.1);
-                        LifeSystem.DecreaseHealth(r, dartStationId, damage);
+                        var damage = (uint)(performanceSystem.GetMaxHealth(r) * 0.1);
+                        lifeSystem.DecreaseHealth(r, dartStationId, damage);
 
                         return Task.CompletedTask;
                     })
@@ -583,13 +555,13 @@ public sealed partial class DartSystem : ISystem
         else if (e.Target == DartTarget.RandomMoving)
         {
             await Task.WhenAll(
-                EntitySystem
+                entitySystem
                     .GetOperatedEntities<IHealthed>(e.Camp)
                     .Select(r =>
                     {
-                        var damage = (uint)(PerformanceSystem.GetMaxHealth(r) * 0.25);
-                        LifeSystem.DecreaseHealth(r, dartStationId, damage);
-                        BattleSystem.AddDamageSum(e.Camp, damage);
+                        var damage = (uint)(performanceSystem.GetMaxHealth(r) * 0.25);
+                        lifeSystem.DecreaseHealth(r, dartStationId, damage);
+                        battleSystem.AddDamageSum(e.Camp, damage);
 
                         return Task.CompletedTask;
                     })
@@ -603,8 +575,8 @@ public sealed partial class DartSystem : ISystem
         )
         {
             var baseId = e.Camp == Camp.Blue ? Identity.RedBase : Identity.BlueBase;
-            var @base = EntitySystem.Entities[baseId] as Base;
-            BaseSystem.SetArmorOpen(@base, true);
+            var @base = entitySystem.Entities[baseId] as Base;
+            baseSystem.SetArmorOpen(@base, true);
         }
     }
 }

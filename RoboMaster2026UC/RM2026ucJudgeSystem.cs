@@ -9,20 +9,13 @@ using VContainer;
 
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC;
 
-public sealed class RM2026ucJudgeSystem : JudgeSystem
+public sealed class RM2026ucJudgeSystem(
+    ILogger logger,
+    ITimeSystem timeSystem,
+    IEnumerable<ISystem> systems,
+    ExperienceSystem experienceSystem)
+    : JudgeSystem
 {
-    [Inject]
-    internal ILogger Logger { get; set; }
-
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
-
-    [Inject]
-    internal IEnumerable<ISystem> Systems { get; set; }
-
-    [Inject]
-    internal ExperienceSystem ExperienceSystem { get; set; }
-
     public static void Build(IContainerBuilder builder)
     {
         builder
@@ -155,8 +148,8 @@ public sealed class RM2026ucJudgeSystem : JudgeSystem
 
         await Reset(cancellation);
 
-        Logger.Info("Judge system for RoboMaster 2025uc starts.");
-        TimeSystem.SetStage(JudgeSystemStage.Repair);
+        logger.Info("Judge system for RoboMaster 2025uc starts.");
+        timeSystem.SetStage(JudgeSystemStage.Repair);
     }
 
     public override async Task Reset(
@@ -166,10 +159,9 @@ public sealed class RM2026ucJudgeSystem : JudgeSystem
         await base.Reset(cancellation);
 
         // reset before other systems
-        await TimeSystem.Reset(cancellation);
-        await ExperienceSystem.Reset(cancellation);
+        await timeSystem.Reset(cancellation);
+        await experienceSystem.Reset(cancellation);
 
-        var systems = Systems.Except(new ISystem[] { ExperienceSystem, TimeSystem });
-        await Task.WhenAll(systems.Select(system => system.Reset(cancellation)));
+        await Task.WhenAll(systems.Except([experienceSystem, timeSystem]).Select(system => system.Reset(cancellation)));
     }
 }

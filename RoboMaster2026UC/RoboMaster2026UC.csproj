@@ -6,6 +6,7 @@
         <Nullable>enable</Nullable>
         <AssemblyName>RoboSouls.JudgeSystem.RoboMaster2026UC</AssemblyName>
         <RootNamespace>RoboSouls.JudgeSystem.RoboMaster2026UC</RootNamespace>
+        <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     </PropertyGroup>
 
     <ItemGroup>
@@ -15,15 +16,17 @@
     <ItemGroup>
       <Reference Include="VContainer">
         <HintPath>..\Lib\VContainer.dll</HintPath>
+          <Private>false</Private>
       </Reference>
       <Reference Include="VContainer.SourceGenerator">
         <HintPath>..\Lib\VContainer.SourceGenerator.dll</HintPath>
+          <Private>false</Private>
       </Reference>
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Google.Protobuf" Version="3.33.2" />
-      <PackageReference Include="Grpc.Tools" Version="2.76.0">
+      <PackageReference Include="Google.Protobuf" Version="3.24.0" />
+      <PackageReference Include="Grpc.Tools" Version="2.71.0">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>

@@ -3,72 +3,48 @@ using System.Threading;
 using System.Threading.Tasks;
 using RoboSouls.JudgeSystem.Entities;
 using RoboSouls.JudgeSystem.Systems;
-using VContainer;
 
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 
 /// <summary>
 /// 补给系统
 /// </summary>
-public sealed class SupplySystem : ISystem
+public sealed class SupplySystem(
+    EntitySystem entitySystem,
+    ZoneSystem zoneSystem,
+    ITimeSystem timeSystem,
+    EconomySystem economySystem,
+    BattleSystem battleSystem,
+    BuffSystem buffSystem,
+    PerformanceSystemBase performanceSystem,
+    LifeSystem lifeSystem,
+    ModuleSystemBase moduleSystem)
+    : ISystem
 {
     public const ushort SupplyZoneId = 70;
     public static readonly Identity RedSupplyZoneId = new Identity(Camp.Red, SupplyZoneId);
     public static readonly Identity BlueSupplyZoneId = new Identity(Camp.Blue, SupplyZoneId);
 
-    [Inject]
-    internal ILogger Logger { get; set; }
-
-    [Inject]
-    internal ICacheProvider<uint> UintCacheBox { get; set; }
-
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
-
-    [Inject]
-    internal ZoneSystem ZoneSystem { get; set; }
-
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
-
-    [Inject]
-    internal EconomySystem EconomySystem { get; set; }
-
-    [Inject]
-    internal BattleSystem BattleSystem { get; set; }
-
-    [Inject]
-    internal BuffSystem BuffSystem { get; set; }
-
-    [Inject]
-    internal PerformanceSystemBase PerformanceSystem { get; set; }
-
-    [Inject]
-    internal LifeSystem LifeSystem { get; set; }
-
-    [Inject]
-    internal ModuleSystemBase ModuleSystem { get; set; }
-
     public Task Reset(CancellationToken cancellation = new CancellationToken())
     {
-        TimeSystem.RegisterRepeatAction(1, SupplyUpdateLoop);
+        timeSystem.RegisterRepeatAction(1, SupplyUpdateLoop);
 
         return Task.CompletedTask;
     }
 
     public bool IsAmmoSupplyAllowed(in Identity entity)
     {
-        if (TimeSystem.Stage is not JudgeSystemStage.Match)
+        if (timeSystem.Stage is not JudgeSystemStage.Match)
             return false;
 
         if (
-            !EntitySystem.TryGetEntity(entity, out IShooter s)
-            || !EntitySystem.HasOperator(entity)
+            !entitySystem.TryGetEntity(entity, out IShooter s)
+            || !entitySystem.HasOperator(entity)
         )
             return false;
 
-        return IsInSupplyZone(ZoneSystem, entity)
-               || ZoneSystem.IsInZone(
+        return IsInSupplyZone(zoneSystem, entity)
+               || zoneSystem.IsInZone(
                    entity,
                    entity.Camp == Camp.Red
                        ? OutpostSystem.RedOutpostZoneId
@@ -106,7 +82,7 @@ public sealed class SupplySystem : ISystem
         if (camp is not (Camp.Blue or Camp.Red))
             return 0;
 
-        var deposit = camp == Camp.Red ? EconomySystem.RedCoin : EconomySystem.BlueCoin;
+        var deposit = camp == Camp.Red ? economySystem.RedCoin : economySystem.BlueCoin;
         var price = GetPerAmmoPrice(ammoType);
         return deposit / price;
     }
@@ -124,41 +100,41 @@ public sealed class SupplySystem : ISystem
 
         if (shooter.Id.Camp == Camp.Red)
         {
-            EconomySystem.RedCoin -= cost;
+            economySystem.RedCoin -= cost;
         }
         else if (shooter.Id.Camp == Camp.Blue)
         {
-            EconomySystem.BlueCoin -= cost;
+            economySystem.BlueCoin -= cost;
         }
 
-        BattleSystem.SetAmmoAllowance(shooter, shooter.AmmoAllowance + amount);
+        battleSystem.SetAmmoAllowance(shooter, shooter.AmmoAllowance + amount);
     }
 
     public bool TryRemoteSupplyBlood(Identity id)
     {
-        if (!EntitySystem.TryGetEntity(id, out IHealthed healthed))
+        if (!entitySystem.TryGetEntity(id, out IHealthed healthed))
             return false;
         var cost = CalcRemoteSupplyBloodPrice();
         if (id.Camp == Camp.Red)
         {
-            if (EconomySystem.RedCoin < cost)
+            if (economySystem.RedCoin < cost)
                 return false;
-            EconomySystem.RedCoin -= cost;
+            economySystem.RedCoin -= cost;
         }
         else if (id.Camp == Camp.Blue)
         {
-            if (EconomySystem.BlueCoin < cost)
+            if (economySystem.BlueCoin < cost)
                 return false;
-            EconomySystem.BlueCoin -= cost;
+            economySystem.BlueCoin -= cost;
         }
 
-        TimeSystem.RegisterOnceAction(
+        timeSystem.RegisterOnceAction(
             6,
             () =>
             {
-                LifeSystem.IncreaseHealth(
+                lifeSystem.IncreaseHealth(
                     healthed,
-                    (uint)(PerformanceSystem.GetMaxHealth(healthed) * 0.6f)
+                    (uint)(performanceSystem.GetMaxHealth(healthed) * 0.6f)
                 );
             }
         );
@@ -166,62 +142,62 @@ public sealed class SupplySystem : ISystem
         return true;
     }
 
-    public bool TryRemoteSupplyAmmo17mm(Identity id)
+    public bool TryRemoteSupplyAmmo17Mm(Identity id)
     {
-        if (!EntitySystem.TryGetEntity(id, out IShooter shooter))
+        if (!entitySystem.TryGetEntity(id, out IShooter shooter))
             return false;
         if (shooter.AmmoType != PerformanceSystemBase.AmmoType17mm)
             return false;
         const int cost = 150;
         if (id.Camp == Camp.Red)
         {
-            if (EconomySystem.RedCoin < cost)
+            if (economySystem.RedCoin < cost)
                 return false;
-            EconomySystem.RedCoin -= cost;
+            economySystem.RedCoin -= cost;
         }
         else if (id.Camp == Camp.Blue)
         {
-            if (EconomySystem.BlueCoin < cost)
+            if (economySystem.BlueCoin < cost)
                 return false;
-            EconomySystem.BlueCoin -= cost;
+            economySystem.BlueCoin -= cost;
         }
 
-        TimeSystem.RegisterOnceAction(
+        timeSystem.RegisterOnceAction(
             6,
             () =>
             {
-                BattleSystem.SetAmmoAllowance(shooter, shooter.AmmoAllowance + 100);
+                battleSystem.SetAmmoAllowance(shooter, shooter.AmmoAllowance + 100);
             }
         );
 
         return true;
     }
 
-    public bool TryRemoteSupplyAmmo42mm(Identity id)
+    public bool TryRemoteSupplyAmmo42Mm(Identity id)
     {
-        if (!EntitySystem.TryGetEntity(id, out IShooter shooter))
+        if (!entitySystem.TryGetEntity(id, out IShooter shooter))
             return false;
         if (shooter.AmmoType != PerformanceSystemBase.AmmoType42mm)
             return false;
         const int cost = 150;
         if (id.Camp == Camp.Red)
         {
-            if (EconomySystem.RedCoin < cost)
+            if (economySystem.RedCoin < cost)
                 return false;
-            EconomySystem.RedCoin -= cost;
+            economySystem.RedCoin -= cost;
         }
         else if (id.Camp == Camp.Blue)
         {
-            if (EconomySystem.BlueCoin < cost)
+            if (economySystem.BlueCoin < cost)
                 return false;
-            EconomySystem.BlueCoin -= cost;
+            economySystem.BlueCoin -= cost;
         }
 
-        TimeSystem.RegisterOnceAction(
+        timeSystem.RegisterOnceAction(
             6,
             () =>
             {
-                BattleSystem.SetAmmoAllowance(shooter, shooter.AmmoAllowance + 10);
+                battleSystem.SetAmmoAllowance(shooter, shooter.AmmoAllowance + 10);
             }
         );
 
@@ -235,7 +211,7 @@ public sealed class SupplySystem : ISystem
 60
 × 20) 金币/1 次
          */
-        return (int)(Math.Round(TimeSystem.StageTimeElapsed / 60 * 20) + 50);
+        return (int)(Math.Round(timeSystem.StageTimeElapsed / 60 * 20) + 50);
     }
 
     private Task SupplyUpdateLoop()
@@ -264,37 +240,37 @@ public sealed class SupplySystem : ISystem
     private Task SupplyUpdateLoopFor(in Identity id)
     {
         if (
-            TimeSystem.Stage != JudgeSystemStage.Match
-            || !EntitySystem.TryGetOperatedEntity(id, out IHealthed healthed)
+            timeSystem.Stage != JudgeSystemStage.Match
+            || !entitySystem.TryGetOperatedEntity(id, out IHealthed healthed)
             || !id.IsHero() && !id.IsInfantry() && !id.IsSentry() && !id.IsEngineer()
             || healthed.IsDead()
         )
             return Task.CompletedTask;
 
         if (
-            ZoneSystem.IsInZone(id, id.Camp == Camp.Red ? RedSupplyZoneId : BlueSupplyZoneId)
+            zoneSystem.IsInZone(id, id.Camp == Camp.Red ? RedSupplyZoneId : BlueSupplyZoneId)
         )
         {
-            ModuleSystem.SetGunLocked(id, false);
+            moduleSystem.SetGunLocked(id, false);
             var rate = 0.1f;
             if (
-                IsInSupplyZone(ZoneSystem, id)
-                && TimeSystem.StageTimeElapsed > 240
-                && BuffSystem.TryGetBuff(id, Buffs.OutOfCombatBuff, out Buff _)
+                IsInSupplyZone(zoneSystem, id)
+                && timeSystem.StageTimeElapsed > 240
+                && buffSystem.TryGetBuff(id, Buffs.OutOfCombatBuff, out Buff _)
             )
             {
                 rate = 0.25f;
             }
 
             var reviveAmount = (uint)
-                Math.Ceiling(PerformanceSystem.GetMaxHealth(healthed) * rate);
-            LifeSystem.IncreaseHealth(healthed, reviveAmount);
-            BuffSystem.AddBuff(id, Buffs.PowerBuff, 2f, TimeSpan.MaxValue);
+                Math.Ceiling(performanceSystem.GetMaxHealth(healthed) * rate);
+            lifeSystem.IncreaseHealth(healthed, reviveAmount);
+            buffSystem.AddBuff(id, Buffs.PowerBuff, 2f, TimeSpan.MaxValue);
                 
-            BuffSystem.RemoveBuff(id, RM2026ucBuffs.WeakenedBuff);
+            buffSystem.RemoveBuff(id, RM2026ucBuffs.WeakenedBuff);
         }
         else if (
-            ZoneSystem.IsInZone(
+            zoneSystem.IsInZone(
                 id,
                 id.Camp == Camp.Red
                     ? OutpostSystem.RedOutpostZoneId
@@ -304,8 +280,8 @@ public sealed class SupplySystem : ISystem
         {
             const float rate = 0.05f;
             var reviveAmount = (uint)
-                Math.Ceiling(PerformanceSystem.GetMaxHealth(healthed) * rate);
-            LifeSystem.IncreaseHealth(healthed, reviveAmount);
+                Math.Ceiling(performanceSystem.GetMaxHealth(healthed) * rate);
+            lifeSystem.IncreaseHealth(healthed, reviveAmount);
         }
 
         return Task.CompletedTask;

@@ -9,7 +9,7 @@ namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 /// 地形跨越增益点（公路）
 /// </summary>
 [Routes]
-public sealed partial class RoadTerrainLeapZoneSystem : TerrainLeapZoneSystem
+public sealed partial class RoadTerrainLeapZoneSystem(ITimeSystem timeSystem, ICacheProvider<double> doubleCacheBox, BuffSystem buffSystem) : TerrainLeapZoneSystem(timeSystem, doubleCacheBox, buffSystem)
 {
     [Inject]
     internal void Inject(Router router)
@@ -40,19 +40,19 @@ public sealed partial class RoadTerrainLeapZoneSystem : TerrainLeapZoneSystem
         //     益，持续时间为 5 秒
         //      同一机器人在获得地形跨越增益（公路）后的 15 秒内，不能重复获得地形跨越增益（公路）
         base.OnActivationSuccess(operatorId, activationTime);
-        if (BuffSystem.TryGetBuff(operatorId, RM2026ucBuffs.TerrainLeapRoadBuff, out Buff _))
+        if (buffSystem.TryGetBuff(operatorId, RM2026ucBuffs.TerrainLeapRoadBuff, out Buff _))
         {
             return;
         }
 
-        BuffSystem.AddBuff(
+        buffSystem.AddBuff(
             operatorId,
             RM2026ucBuffs.TerrainLeapRoadBuff,
             1,
             TimeSpan.FromSeconds(15)
         );
 
-        var cooldownBuffValue = TimeSystem.StageTimeElapsed switch
+        var cooldownBuffValue = timeSystem.StageTimeElapsed switch
         {
             >= 120 and < 180 => 2,
             >= 180 and < 300 => 3,
@@ -62,7 +62,7 @@ public sealed partial class RoadTerrainLeapZoneSystem : TerrainLeapZoneSystem
 
         if (cooldownBuffValue > 0)
         {
-            BuffSystem.AddBuff(
+            buffSystem.AddBuff(
                 operatorId,
                 Buffs.CoolDownBuff,
                 cooldownBuffValue,
@@ -70,7 +70,7 @@ public sealed partial class RoadTerrainLeapZoneSystem : TerrainLeapZoneSystem
             );
         }
 
-        BuffSystem.AddBuff(
+        buffSystem.AddBuff(
             operatorId,
             Buffs.DefenceBuff,
             0.25f,

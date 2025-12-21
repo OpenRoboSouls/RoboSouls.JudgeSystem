@@ -16,7 +16,11 @@ namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 /// 冷却增益。
 /// </summary>
 [Routes]
-public sealed partial class CentralHighlandSystem : OccupyZoneSystemBase
+public sealed partial class CentralHighlandSystem(
+    EntitySystem entitySystem,
+    BuffSystem buffSystem,
+    ITimeSystem timeSystem)
+    : OccupyZoneSystemBase
 {
     [Inject]
     internal void Inject(Router router)
@@ -26,15 +30,6 @@ public sealed partial class CentralHighlandSystem : OccupyZoneSystemBase
 
     public static readonly Identity CentralHighlandZoneId = new Identity(Camp.Judge, 120);
 
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
-
-    [Inject]
-    internal BuffSystem BuffSystem { get; set; }
-
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
-
     public override Identity ZoneId => CentralHighlandZoneId;
 
     protected override void OnZoneOccupied(Camp camp) { }
@@ -43,12 +38,12 @@ public sealed partial class CentralHighlandSystem : OccupyZoneSystemBase
 
     protected override void OnOccupierEnterZone(in Identity operatorId)
     {
-        if (TimeSystem.Stage != JudgeSystemStage.Match)
+        if (timeSystem.Stage != JudgeSystemStage.Match)
             return;
 
-        if (EntitySystem.Entities[operatorId] is not (Hero or Infantry or Sentry))
+        if (entitySystem.Entities[operatorId] is not (Hero or Infantry or Sentry))
             return;
-        var cooldownBuffValue = TimeSystem.StageTimeElapsed switch
+        var cooldownBuffValue = timeSystem.StageTimeElapsed switch
         {
             >= 120 and < 180 => 2,
             >= 180 and < 300 => 3,
@@ -59,7 +54,7 @@ public sealed partial class CentralHighlandSystem : OccupyZoneSystemBase
         if (cooldownBuffValue <= 0)
             return;
 
-        BuffSystem.AddBuff(
+        buffSystem.AddBuff(
             operatorId,
             Buffs.CoolDownBuff,
             cooldownBuffValue,
@@ -69,11 +64,11 @@ public sealed partial class CentralHighlandSystem : OccupyZoneSystemBase
 
     protected override void OnOccupierLeaveZone(in Identity operatorId)
     {
-        if (TimeSystem.Stage != JudgeSystemStage.Match)
+        if (timeSystem.Stage != JudgeSystemStage.Match)
             return;
 
-        if (EntitySystem.Entities[operatorId] is not (Hero or Infantry or Sentry))
+        if (entitySystem.Entities[operatorId] is not (Hero or Infantry or Sentry))
             return;
-        BuffSystem.RemoveBuff(operatorId, Buffs.CoolDownBuff);
+        buffSystem.RemoveBuff(operatorId, Buffs.CoolDownBuff);
     }
 }

@@ -3,7 +3,6 @@ using RoboSouls.JudgeSystem.Entities;
 using RoboSouls.JudgeSystem.RoboMaster2026UC.Entities;
 using RoboSouls.JudgeSystem.RoboMaster2026UC.Events;
 using RoboSouls.JudgeSystem.Systems;
-using VContainer;
 using VitalRouter;
 
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
@@ -21,7 +20,16 @@ namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 /// 具有 150%攻击增益和金币奖励； 在部署模式下命中对方基地的具有增益的 42mm 弹丸总数量＜M 时，
 /// 英雄机器人发射 42mm 弹丸攻击基地可重新获得上述增益和金币奖励。
 /// </summary>
-public sealed class HeroSystem : ISystem
+public sealed class HeroSystem(
+    BuffSystem buffSystem,
+    ICommandPublisher publisher,
+    ICacheProvider<int> intCacheBox,
+    ICacheProvider<double> doubleCacheBox,
+    EntitySystem entitySystem,
+    ZoneSystem zoneSystem,
+    ITimeSystem timeSystem,
+    ICommandPublisher commandPublisher)
+    : ISystem
 {
     public const ushort DeploymentZoneId = 250;
     public static readonly Identity RedDeployZoneId = new Identity(Camp.Red, DeploymentZoneId);
@@ -32,33 +40,6 @@ public sealed class HeroSystem : ISystem
 
     private static readonly int DeployHitCountCacheKey = "deploy_hit_count".Sum();
     private static readonly int DeployStartTimeCacheKey = "deploy_start_time".Sum();
-
-    [Inject]
-    internal BuffSystem BuffSystem { get; set; }
-
-    [Inject]
-    internal ICommandPublisher Publisher { get; set; }
-
-    [Inject]
-    internal ICacheWriter<bool> BoolCacheBox { get; set; }
-
-    [Inject]
-    internal ICacheProvider<int> IntCacheBox { get; set; }
-
-    [Inject]
-    internal ICacheProvider<double> DoubleCacheBox { get; set; }
-
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
-
-    [Inject]
-    internal ZoneSystem ZoneSystem { get; set; }
-
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
-
-    [Inject]
-    internal ICommandPublisher CommandPublisher { get; set; }
 
     public enum EnterDeploymentModeRefuseReason
     {
@@ -76,16 +57,16 @@ public sealed class HeroSystem : ISystem
         if (!id.IsHero())
             return false;
 
-        if (TimeSystem.Stage != JudgeSystemStage.Match)
+        if (timeSystem.Stage != JudgeSystemStage.Match)
             return false;
 
-        if (!EntitySystem.TryGetOperatedEntity(id, out Hero h) || h.IsDead())
+        if (!entitySystem.TryGetOperatedEntity(id, out Hero h) || h.IsDead())
         {
             reason = EnterDeploymentModeRefuseReason.Dead;
             return false;
         }
 
-        if (!ZoneSystem.IsInZone(id, new Identity(id.Camp, DeploymentZoneId)))
+        if (!zoneSystem.IsInZone(id, new Identity(id.Camp, DeploymentZoneId)))
         {
             reason = EnterDeploymentModeRefuseReason.Zone;
             return false;
@@ -107,7 +88,7 @@ public sealed class HeroSystem : ISystem
         if (!id.IsHero())
             return;
 
-        if (!EntitySystem.TryGetOperatedEntity(id, out Hero hero))
+        if (!entitySystem.TryGetOperatedEntity(id, out Hero hero))
             return;
 
         SetDeploymentMode(id, false);
@@ -119,10 +100,10 @@ public sealed class HeroSystem : ISystem
     /// <returns></returns>
     public int GetDeployHitCountAllowance()
     {
-        if (TimeSystem.Stage != JudgeSystemStage.Match)
+        if (timeSystem.Stage != JudgeSystemStage.Match)
             return 0;
 
-        var t = TimeSystem.StageTimeElapsed;
+        var t = timeSystem.StageTimeElapsed;
         var m = 2 + (int)Math.Round(t / 20);
         return m;
     }
@@ -131,7 +112,7 @@ public sealed class HeroSystem : ISystem
     {
         var id = camp == Camp.Red ? RedDeployZoneId : BlueDeployZoneId;
 
-        return IntCacheBox.WithReaderNamespace(id).Load(DeployHitCountCacheKey);
+        return intCacheBox.WithReaderNamespace(id).Load(DeployHitCountCacheKey);
     }
 
     public bool CanDeploymentHit(in Identity id)
@@ -146,50 +127,50 @@ public sealed class HeroSystem : ISystem
             return false;
 
         return !TryGetDeployProgress(id, out _)
-               && BuffSystem.TryGetBuff(id, RM2026ucBuffs.HeroDeploymentModeBuff, out Buff _);
+               && buffSystem.TryGetBuff(id, RM2026ucBuffs.HeroDeploymentModeBuff, out Buff _);
     }
 
     private void SetDeployHitCount(Camp camp, int count)
     {
         var id = camp == Camp.Red ? RedDeployZoneId : BlueDeployZoneId;
 
-        IntCacheBox.WithWriterNamespace(id).Save(DeployHitCountCacheKey, count);
+        intCacheBox.WithWriterNamespace(id).Save(DeployHitCountCacheKey, count);
     }
 
     private void SetDeploymentMode(in Identity id, bool isDeploymentMode)
     {
         if (isDeploymentMode)
         {
-            SetDeployModeEnterTime(id, TimeSystem.Time);
-            BuffSystem.AddBuff(id, RM2026ucBuffs.HeroDeploymentModeBuff, 1, TimeSpan.MaxValue);
+            SetDeployModeEnterTime(id, timeSystem.Time);
+            buffSystem.AddBuff(id, RM2026ucBuffs.HeroDeploymentModeBuff, 1, TimeSpan.MaxValue);
             // BuffSystem.AddBuff(id, Buffs.AttackBuff, 1.5f, TimeSpan.MaxValue);
-            BuffSystem.AddBuff(id, Buffs.DefenceBuff, 0.25f, TimeSpan.MaxValue);
-            Publisher.PublishAsync(new HeroEnterDeploymentModeEvent(id));
+            buffSystem.AddBuff(id, Buffs.DefenceBuff, 0.25f, TimeSpan.MaxValue);
+            publisher.PublishAsync(new HeroEnterDeploymentModeEvent(id));
         }
         else
         {
-            BuffSystem.RemoveBuff(id, RM2026ucBuffs.HeroDeploymentModeBuff);
+            buffSystem.RemoveBuff(id, RM2026ucBuffs.HeroDeploymentModeBuff);
             // BuffSystem.RemoveBuff(id, Buffs.AttackBuff);
-            BuffSystem.RemoveBuff(id, Buffs.DefenceBuff);
-            Publisher.PublishAsync(new HeroExitDeploymentModeEvent(id));
+            buffSystem.RemoveBuff(id, Buffs.DefenceBuff);
+            publisher.PublishAsync(new HeroExitDeploymentModeEvent(id));
         }
     }
 
     public bool TryGetDeployProgress(in Identity id, out double progress)
     {
-        var elapsed = TimeSystem.Time - GetDeployModeEnterTime(id);
+        var elapsed = timeSystem.Time - GetDeployModeEnterTime(id);
         progress = elapsed / RM2026ucPerformanceSystem.DeploymentEnterTime;
         return progress <= 1;
     }
 
     private double GetDeployModeEnterTime(in Identity id)
     {
-        return DoubleCacheBox.WithReaderNamespace(id).Load(DeployStartTimeCacheKey);
+        return doubleCacheBox.WithReaderNamespace(id).Load(DeployStartTimeCacheKey);
     }
 
     private void SetDeployModeEnterTime(in Identity id, double time)
     {
-        DoubleCacheBox.WithWriterNamespace(id).Save(DeployStartTimeCacheKey, time);
+        doubleCacheBox.WithWriterNamespace(id).Save(DeployStartTimeCacheKey, time);
     }
 
     internal void OnDeploymentHit(in Identity id)
@@ -199,12 +180,12 @@ public sealed class HeroSystem : ISystem
 
         // EconomySystem.SetCoin(id.Camp, EconomySystem.GetCoin(id.Camp) + 50);
 
-        CommandPublisher.PublishAsync(
+        commandPublisher.PublishAsync(
             new DeployHitEvent(
                 id.Camp,
                 count + 1,
                 GetDeployHitCountAllowance(),
-                TimeSystem.StageTimeElapsed
+                timeSystem.StageTimeElapsed
             )
         );
     }

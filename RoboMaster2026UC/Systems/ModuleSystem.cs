@@ -10,19 +10,13 @@ using VitalRouter;
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 
 [Routes]
-public sealed partial class ModuleSystem : ModuleSystemBase
+public sealed partial class ModuleSystem(ICacheWriter<byte> byteCacheWriter, LifeSystem lifeSystem) : ModuleSystemBase
 {
     [Inject]
     internal void Inject(Router router)
     {
         MapTo(router);
     }
-
-    [Inject]
-    internal ICacheWriter<byte> ByteCacheWriter { get; set; }
-
-    [Inject]
-    internal LifeSystem LifeSystem { get; set; }
 
     public override bool TrySetRobotChassisType(IChassisd robotId, byte chassisType)
     {
@@ -111,18 +105,18 @@ public sealed partial class ModuleSystem : ModuleSystemBase
 
     private void SetRobotChassisTypeInternal(IChassisd robotId, byte chassisType)
     {
-        ByteCacheWriter
+        byteCacheWriter
             .WithWriterNamespace(robotId.Id)
             .Save(IChassisd.ChassisTypeCacheKey, chassisType);
         if (robotId is IHealthed healthed)
         {
-            LifeSystem.ResetHealth(healthed);
+            lifeSystem.ResetHealth(healthed);
         }
     }
 
     private void SetRobotGunTypeInternal(IShooter robotId, byte gunType)
     {
-        ByteCacheWriter.WithWriterNamespace(robotId.Id).Save(IShooter.GunTypeCacheKey, gunType);
+        byteCacheWriter.WithWriterNamespace(robotId.Id).Save(IShooter.GunTypeCacheKey, gunType);
     }
 
     [Route]

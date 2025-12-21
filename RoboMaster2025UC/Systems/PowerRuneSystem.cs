@@ -244,8 +244,8 @@ public class PowerRuneSystem : ISystem
             .GetOperatedEntities<IExperienced>(camp)
             .Where(r => r is IRobot)
             .Select(s => s.Id)
-            .Append(new Identity(camp, Identity.RedOutpost.ID))
-            .Append(new Identity(camp, Identity.RedBase.ID));
+            .Append(new Identity(camp, Identity.RedOutpost.Id))
+            .Append(new Identity(camp, Identity.RedBase.Id));
         var totalRing = record.Total;
         var attackBuff = GetBigPowerRuneAttackBuffValue(totalRing);
         var defenceBuff = GetBigPowerRuneDefenceBuffValue(totalRing);

@@ -16,7 +16,19 @@ namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 /// 射击、伤害、热量系统
 /// </summary>
 [Routes]
-public sealed partial class BattleSystem : IBattleSystem
+public sealed partial class BattleSystem(
+    ICommandPublisher publisher,
+    LifeSystem lifeSystem,
+    ITimeSystem timeSystem,
+    RM2026ucPerformanceSystem performanceSystem,
+    EntitySystem entitySystem,
+    BuffSystem buffSystem,
+    ICacheWriter<int> intCacheBox,
+    ICacheWriter<float> floatCacheBox,
+    ICacheProvider<uint> uintCacheBox,
+    HeroSystem heroSystem,
+    ModuleSystem moduleSystem)
+    : IBattleSystem
 {
     [Inject]
     internal void Inject(Router router)
@@ -27,51 +39,9 @@ public sealed partial class BattleSystem : IBattleSystem
     private static readonly int RedDamageSumCacheKey = "RedDamageSum".GetHashCode();
     private static readonly int BlueDamageSumCacheKey = "BlueDamageSum".GetHashCode();
 
-    [Inject]
-    internal ICommandPublisher Publisher { get; set; }
-
-    [Inject]
-    internal ICacheProvider<int> AmmoBox { get; set; }
-
-    [Inject]
-    internal LifeSystem LifeSystem { get; set; }
-
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
-
-    [Inject]
-    internal RM2026ucPerformanceSystem PerformanceSystem { get; set; }
-
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
-
-    [Inject]
-    internal ILogger Logger { get; set; }
-
-    [Inject]
-    internal BuffSystem BuffSystem { get; set; }
-
-    [Inject]
-    internal BaseSystem BaseSystem { get; set; }
-
-    [Inject]
-    internal ICacheWriter<int> IntCacheBox { get; set; }
-
-    [Inject]
-    internal ICacheWriter<float> FloatCacheBox { get; set; }
-
-    [Inject]
-    internal ICacheProvider<uint> UintCacheBox { get; set; }
-
-    [Inject]
-    internal HeroSystem HeroSystem { get; set; }
-
-    [Inject]
-    internal ModuleSystem ModuleSystem { get; set; }
-
     public Task Reset(CancellationToken cancellation = new CancellationToken())
     {
-        TimeSystem.RegisterRepeatAction(0.1, CooldownTask);
+        timeSystem.RegisterRepeatAction(0.1, CooldownTask);
 
         return Task.CompletedTask;
     }
@@ -85,10 +55,10 @@ public sealed partial class BattleSystem : IBattleSystem
 
         // 允许一定超发
         SetAmmoAllowance(shooter, shooter.AmmoAllowance - count);
-        SetHeat(shooter, shooter.Heat + PerformanceSystem.GetHeatDelta(shooter) * count);
+        SetHeat(shooter, shooter.Heat + performanceSystem.GetHeatDelta(shooter) * count);
 
         // OnShoot(shooter, count);
-        Publisher.PublishAsync(new ShootCommand(shooter, count));
+        publisher.PublishAsync(new ShootCommand(shooter, count));
 
         return true;
     }
@@ -96,9 +66,9 @@ public sealed partial class BattleSystem : IBattleSystem
     private Task CooldownTask()
     {
         return Task.WhenAll(
-            EntitySystem
+            entitySystem
                 .Entities.Values.OfType<IShooter>()
-                .Where(EntitySystem.HasOperator)
+                .Where(entitySystem.HasOperator)
                 .Select(CooldownTaskFor)
         );
     }
@@ -120,12 +90,12 @@ public sealed partial class BattleSystem : IBattleSystem
             }
         }
 
-        var cooldown = PerformanceSystem.GetCooldown(shooter);
+        var cooldown = performanceSystem.GetCooldown(shooter);
         var cooldownDelta = (float)cooldown / 10;
-        if (BuffSystem.TryGetBuff(shooter.Id, Buffs.CoolDownBuff, out float cooldownBuff))
+        if (buffSystem.TryGetBuff(shooter.Id, Buffs.CoolDownBuff, out float cooldownBuff))
         {
             if (
-                BuffSystem.TryGetBuff(
+                buffSystem.TryGetBuff(
                     shooter.Id,
                     Buffs.CoolDownAmountBuff,
                     out float cooldownAmount
@@ -142,32 +112,32 @@ public sealed partial class BattleSystem : IBattleSystem
         }
 
         var q1 = shooter.Heat;
-        var q0 = PerformanceSystem.GetMaxHeat(shooter);
+        var q0 = performanceSystem.GetMaxHeat(shooter);
         var q2 = GetQ2(shooter, q0);
         // A. 若 Q2 > Q1 > Q0，该机器人对应操作手电脑的第一视角可视度降低且发射机构锁定。 直到 Q1 = 0， 第一视角才会恢复正常，解锁发射机构
         // 若 Q1 > Q2 则全部时间发射机构锁定不再解锁
         if (q1 > q2)
         {
-            BuffSystem.AddBuff(shooter.Id, RM2026ucBuffs.HeatGunLocked, 2, TimeSpan.MaxValue);
+            buffSystem.AddBuff(shooter.Id, RM2026ucBuffs.HeatGunLocked, 2, TimeSpan.MaxValue);
         }
 
         if (q1 > q0)
         {
-            ModuleSystem.SetFpvVisibilityReduced(shooter.Id, true);
-            BuffSystem.AddBuff(shooter.Id, RM2026ucBuffs.HeatGunLocked, 1, TimeSpan.MaxValue);
+            moduleSystem.SetFpvVisibilityReduced(shooter.Id, true);
+            buffSystem.AddBuff(shooter.Id, RM2026ucBuffs.HeatGunLocked, 1, TimeSpan.MaxValue);
         }
             
         // if (Mathf.Approximately(q1, 0))
         if (MathF.Abs(q1 -0 ) < 0.001f)
         {
-            ModuleSystem.SetFpvVisibilityReduced(shooter.Id, false);
+            moduleSystem.SetFpvVisibilityReduced(shooter.Id, false);
             if (
-                !BuffSystem.TryGetBuff(shooter.Id, RM2026ucBuffs.HeatGunLocked, out float v)
+                !buffSystem.TryGetBuff(shooter.Id, RM2026ucBuffs.HeatGunLocked, out float v)
                 // || Mathf.Approximately(v, 1)
                 || MathF.Abs(v - 1) < 0.001f
             )
             {
-                BuffSystem.RemoveBuff(shooter.Id, RM2026ucBuffs.HeatGunLocked);
+                buffSystem.RemoveBuff(shooter.Id, RM2026ucBuffs.HeatGunLocked);
             }
         }
 
@@ -184,12 +154,12 @@ public sealed partial class BattleSystem : IBattleSystem
         byte armorId
     )
     {
-        if (!EntitySystem.TryGetEntity(victimId, out IHealthed victim))
+        if (!entitySystem.TryGetEntity(victimId, out IHealthed victim))
             return;
 
         var buffDamageFactor = 1f;
 
-        if (BuffSystem.TryGetBuff(victimId, Buffs.DefenceBuff, out float defenceBuff))
+        if (buffSystem.TryGetBuff(victimId, Buffs.DefenceBuff, out float defenceBuff))
         {
             if (defenceBuff >= 1)
                 return;
@@ -197,12 +167,12 @@ public sealed partial class BattleSystem : IBattleSystem
             buffDamageFactor *= 1 - defenceBuff;
         }
 
-        if (BuffSystem.TryGetBuff(attacker, Buffs.AttackBuff, out float attackBuff))
+        if (buffSystem.TryGetBuff(attacker, Buffs.AttackBuff, out float attackBuff))
         {
             buffDamageFactor *= attackBuff;
         }
 
-        if (BuffSystem.TryGetBuff(victimId, RM2026ucBuffs.Vulnerable, out float vulnerable))
+        if (buffSystem.TryGetBuff(victimId, RM2026ucBuffs.Vulnerable, out float vulnerable))
         {
             buffDamageFactor *= 1 + vulnerable;
         }
@@ -227,15 +197,15 @@ public sealed partial class BattleSystem : IBattleSystem
                     _ => throw new ArgumentOutOfRangeException(),
                 };
                 if (
-                    HeroSystem.IsDeploymentMode(attacker)
-                    && HeroSystem.CanDeploymentHit(attacker)
+                    heroSystem.IsDeploymentMode(attacker)
+                    && heroSystem.CanDeploymentHit(attacker)
                 )
                 {
                     if (buffDamageFactor > 1f & buffDamageFactor < 1.5f)
                     {
                         buffDamageFactor = 1.5f;
                     }
-                    HeroSystem.OnDeploymentHit(attacker);
+                    heroSystem.OnDeploymentHit(attacker);
                 }
 
                 break;
@@ -306,11 +276,11 @@ public sealed partial class BattleSystem : IBattleSystem
 
         damage = (uint)(damage * buffDamageFactor);
 
-        damage = LifeSystem.DecreaseHealth(victim, attacker, damage);
+        damage = lifeSystem.DecreaseHealth(victim, attacker, damage);
 
-        if (EntitySystem.TryGetEntity(attacker, out IShooter shooter))
+        if (entitySystem.TryGetEntity(attacker, out IShooter shooter))
         {
-            Publisher.PublishAsync(
+            publisher.PublishAsync(
                 new DamageCommand(shooter, victim, damage, ammoType, armorType, armorId)
             );
         }
@@ -338,8 +308,8 @@ public sealed partial class BattleSystem : IBattleSystem
                 _ => throw new ArgumentOutOfRangeException(),
             };
 
-            var outpost = EntitySystem.Entities[outpostId] as Outpost;
-            var defenceBuff = BuffSystem.TryGetBuff(
+            var outpost = entitySystem.Entities[outpostId] as Outpost;
+            var defenceBuff = buffSystem.TryGetBuff(
                 outpostId,
                 Buffs.DefenceBuff,
                 out float buff
@@ -355,7 +325,7 @@ public sealed partial class BattleSystem : IBattleSystem
 
             damage = (uint)(damage * buffDamageFactor);
 
-            damage = LifeSystem.DecreaseHealth(outpost, dartStationId, damage);
+            damage = lifeSystem.DecreaseHealth(outpost, dartStationId, damage);
 
             AddDamageSum(outpostId.Camp, damage);
         }
@@ -368,8 +338,8 @@ public sealed partial class BattleSystem : IBattleSystem
                 _ => throw new ArgumentOutOfRangeException(),
             };
 
-            var b = EntitySystem.Entities[baseId] as Base;
-            var defenceBuff = BuffSystem.TryGetBuff(baseId, Buffs.DefenceBuff, out float buff)
+            var b = entitySystem.Entities[baseId] as Base;
+            var defenceBuff = buffSystem.TryGetBuff(baseId, Buffs.DefenceBuff, out float buff)
                 ? buff
                 : 0;
 
@@ -388,7 +358,7 @@ public sealed partial class BattleSystem : IBattleSystem
 
             damage = (uint)(damage * buffDamageFactor);
 
-            damage = LifeSystem.DecreaseHealth(b, dartStationId, damage);
+            damage = lifeSystem.DecreaseHealth(b, dartStationId, damage);
 
             AddDamageSum(baseId.Camp, damage);
         }
@@ -397,7 +367,7 @@ public sealed partial class BattleSystem : IBattleSystem
     [Route]
     private void OnKill(KillEvent evt)
     {
-        if (!EntitySystem.TryGetOperatedEntity(evt.Victim, out IShooter shooter))
+        if (!entitySystem.TryGetOperatedEntity(evt.Victim, out IShooter shooter))
             return;
 
         SetHeat(shooter, 0);
@@ -414,7 +384,7 @@ public sealed partial class BattleSystem : IBattleSystem
 
     public void SetAmmoAllowance(IShooter shooter, int ammoAllowance)
     {
-        IntCacheBox
+        intCacheBox
             .WithWriterNamespace(shooter.Id)
             .Save(IShooter.AmmoAllowanceCacheKey, ammoAllowance);
     }
@@ -427,21 +397,21 @@ public sealed partial class BattleSystem : IBattleSystem
     private void SetHeat(IShooter shooter, float q1)
     {
         q1 = Math.Clamp(q1, 0, float.MaxValue);
-        var q0 = PerformanceSystem.GetMaxHeat(shooter);
+        var q0 = performanceSystem.GetMaxHeat(shooter);
 
-        FloatCacheBox.WithWriterNamespace(shooter.Id).Save(IShooter.HeatCacheKey, q1);
+        floatCacheBox.WithWriterNamespace(shooter.Id).Save(IShooter.HeatCacheKey, q1);
     }
 
     public uint GetDamageSum(Camp camp)
     {
-        return UintCacheBox.Load(
+        return uintCacheBox.Load(
             camp == Camp.Red ? RedDamageSumCacheKey : BlueDamageSumCacheKey
         );
     }
 
     internal void AddDamageSum(Camp camp, uint damage)
     {
-        UintCacheBox.Save(
+        uintCacheBox.Save(
             camp == Camp.Red ? RedDamageSumCacheKey : BlueDamageSumCacheKey,
             GetDamageSum(camp) + damage
         );

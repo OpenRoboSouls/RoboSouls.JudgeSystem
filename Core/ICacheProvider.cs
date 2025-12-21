@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using RoboSouls.JudgeSystem.Events;
 
 namespace RoboSouls.JudgeSystem;
 
@@ -21,59 +20,61 @@ public interface ICacheProvider<T> : ICacheReader<T>, ICacheWriter<T>;
 
 public static class CacheExtension
 {
-    public static bool TryLoad<T>(this ICacheReader<T> reader, int key, out T value)
+    extension<T>(ICacheReader<T> reader)
     {
-        if (reader.Exists(key))
+        public bool TryLoad(int key, out T value)
         {
-            value = reader.Load(key);
-            return true;
-        }
-        else
-        {
-            value = default;
-            return false;
-        }
+            if (reader.Exists(key))
+            {
+                value = reader.Load(key);
+                return true;
+            }
+            else
+            {
+                value = default;
+                return false;
+            }
         
-    }
-        
-    public static T LoadOrDefault<T>(this ICacheReader<T> reader, int key, T defaultValue)
-    {
-        if (TryLoad(reader, key, out var value))
-        {
-            return value;
         }
-        else
+
+        public T LoadOrDefault(int key, T defaultValue)
         {
-            return defaultValue;
+            if (TryLoad(reader, key, out var value))
+            {
+                return value;
+            }
+            else
+            {
+                return defaultValue;
+            }
+        }
+
+        public ICacheReader<T> WithReaderNamespace(int mask)
+        {
+            // return new MaskedCacheProvider<T>(reader, mask);
+            return MaskedCacheProvider<T>.Get(reader, mask);
+        }
+
+        public ICacheReader<T> WithReaderNamespace(in Identity nameSpace
+        )
+        {
+            return reader.WithReaderNamespace(nameSpace.GetHashCode());
         }
     }
 
-    public static ICacheReader<T> WithReaderNamespace<T>(this ICacheReader<T> reader, int mask)
+    extension<T>(ICacheWriter<T> writer)
     {
-        // return new MaskedCacheProvider<T>(reader, mask);
-        return MaskedCacheProvider<T>.Get(reader, mask);
-    }
+        public ICacheWriter<T> WithWriterNamespace(int mask)
+        {
+            // return new MaskedCacheProvider<T>(writer, mask);
+            return MaskedCacheProvider<T>.Get(writer, mask);
+        }
 
-    public static ICacheReader<T> WithReaderNamespace<T>(
-        this ICacheReader<T> reader,
-        in Identity nameSpace
-    )
-    {
-        return reader.WithReaderNamespace(nameSpace.GetHashCode());
-    }
-
-    public static ICacheWriter<T> WithWriterNamespace<T>(this ICacheWriter<T> writer, int mask)
-    {
-        // return new MaskedCacheProvider<T>(writer, mask);
-        return MaskedCacheProvider<T>.Get(writer, mask);
-    }
-
-    public static ICacheWriter<T> WithWriterNamespace<T>(
-        this ICacheWriter<T> writer,
-        in Identity nameSpace
-    )
-    {
-        return writer.WithWriterNamespace(nameSpace.GetHashCode());
+        public ICacheWriter<T> WithWriterNamespace(in Identity nameSpace
+        )
+        {
+            return writer.WithWriterNamespace(nameSpace.GetHashCode());
+        }
     }
 }
 

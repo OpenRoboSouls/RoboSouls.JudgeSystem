@@ -13,31 +13,19 @@ namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 /// 经验值分发系统
 /// </summary>
 [Routes]
-public sealed partial class ExperienceDispatchSystem : ISystem
+public sealed partial class ExperienceDispatchSystem(
+    ExperienceSystem experienceSystem,
+    EntitySystem entitySystem,
+    ITimeSystem timeSystem,
+    RM2026ucPerformanceSystem performanceSystem,
+    LifeSystem lifeSystem)
+    : ISystem
 {
     [Inject]
     internal void Inject(Router router)
     {
         MapTo(router);
     }
-
-    [Inject]
-    internal ExperienceSystem ExperienceSystem { get; set; }
-
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
-
-    [Inject]
-    internal ILogger Logger { get; set; }
-
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
-
-    [Inject]
-    internal RM2026ucPerformanceSystem PerformanceSystem { get; set; }
-
-    [Inject]
-    internal LifeSystem LifeSystem { get; set; }
 
     /// <summary>
     /// 发射弹丸
@@ -49,16 +37,16 @@ public sealed partial class ExperienceDispatchSystem : ISystem
     [Route]
     private void OnShoot(ShootCommand command)
     {
-        if (TimeSystem.Stage != JudgeSystemStage.Match)
+        if (timeSystem.Stage != JudgeSystemStage.Match)
             return;
 
         if (command.Shooter is Hero h)
         {
-            ExperienceSystem.AddExp(h, command.Amount * 10);
+            experienceSystem.AddExp(h, command.Amount * 10);
         }
         else if (command.Shooter is Infantry r)
         {
-            ExperienceSystem.AddExp(r, command.Amount);
+            experienceSystem.AddExp(r, command.Amount);
         }
     }
 
@@ -69,7 +57,7 @@ public sealed partial class ExperienceDispatchSystem : ISystem
     [Route]
     private void OnDamage(DamageCommand damageCommand)
     {
-        if (TimeSystem.Stage != JudgeSystemStage.Match)
+        if (timeSystem.Stage != JudgeSystemStage.Match)
             return;
         if (damageCommand.Shooter is not IExperienced shooter)
             return;
@@ -93,7 +81,7 @@ public sealed partial class ExperienceDispatchSystem : ISystem
             deltaExp = (int)(damageCommand.Damage / 2);
         }
 
-        ExperienceSystem.AddExp(shooter, deltaExp);
+        experienceSystem.AddExp(shooter, deltaExp);
     }
 
     /// <summary>
@@ -115,21 +103,21 @@ public sealed partial class ExperienceDispatchSystem : ISystem
     [Route]
     private void OnKill(KillEvent evt)
     {
-        if (!EntitySystem.TryGetEntity(evt.Victim, out IRobot victim))
+        if (!entitySystem.TryGetEntity(evt.Victim, out IRobot victim))
             return;
-        if (!EntitySystem.TryGetEntity(evt.Killer, out IRobot killer))
+        if (!entitySystem.TryGetEntity(evt.Killer, out IRobot killer))
             return;
 
-        var victimLevel = victim is IExperienced ve ? PerformanceSystem.GetLevel(ve) : 1;
+        var victimLevel = victim is IExperienced ve ? performanceSystem.GetLevel(ve) : 1;
         if (killer is IExperienced ke)
         {
-            var killerLevel = PerformanceSystem.GetLevel(ke);
+            var killerLevel = performanceSystem.GetLevel(ke);
                 
-            ExperienceSystem.AddExp(ke, CalcExpGained(victimLevel, killerLevel));
+            experienceSystem.AddExp(ke, CalcExpGained(victimLevel, killerLevel));
         }
         else
         {
-            var averageRobots = EntitySystem.GetOperatedEntities<IExperienced>(evt.Killer.Camp)
+            var averageRobots = entitySystem.GetOperatedEntities<IExperienced>(evt.Killer.Camp)
                 .Where(r => r is IHealthed h && !h.IsDead())
                 .ToArray();
             var averageExp = averageRobots.Average(r => r.Experience);
@@ -138,7 +126,7 @@ public sealed partial class ExperienceDispatchSystem : ISystem
                 
             foreach (var robot in averageRobots)
             {
-                ExperienceSystem.AddExp(robot, exp);
+                experienceSystem.AddExp(robot, exp);
             }
         }
     }
@@ -163,13 +151,13 @@ public sealed partial class ExperienceDispatchSystem : ISystem
     {
         if (evt.PrevLevel >= evt.NewLevel || evt.PrevLevel <= 1)
             return;
-        if (!EntitySystem.TryGetOperatedEntity(evt.Operator, out IHealthed healthed))
+        if (!entitySystem.TryGetOperatedEntity(evt.Operator, out IHealthed healthed))
             return;
 
-        var maxHealth = PerformanceSystem.GetMaxHealth(healthed);
-        var lastMaxHealth = PerformanceSystem.GetMaxHealth(healthed, evt.PrevLevel);
+        var maxHealth = performanceSystem.GetMaxHealth(healthed);
+        var lastMaxHealth = performanceSystem.GetMaxHealth(healthed, evt.PrevLevel);
         var deltaHealth = maxHealth - lastMaxHealth;
 
-        LifeSystem.IncreaseHealth(healthed, deltaHealth);
+        lifeSystem.IncreaseHealth(healthed, deltaHealth);
     }
 }

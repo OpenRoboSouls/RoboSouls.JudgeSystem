@@ -6,22 +6,15 @@ using RoboSouls.JudgeSystem.Entities;
 using RoboSouls.JudgeSystem.RoboMaster2026UC.Entities;
 using RoboSouls.JudgeSystem.RoboMaster2026UC.Events;
 using RoboSouls.JudgeSystem.Systems;
-using VContainer;
 
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 
-public sealed class RM2026ucLifeSystem : LifeSystem
+public sealed class RM2026ucLifeSystem(ZoneSystem zoneSystem, EconomySystem economySystem) : LifeSystem
 {
     private static readonly int ReviveProgressTotalCacheKey = "revive_progress_total".Sum();
     private static readonly int ReviveProgressRemainingCacheKey =
         "revive_progress_remaining".Sum();
     private static readonly int BuyReviveCountCacheKey = "buy_revive_count".Sum();
-
-    [Inject]
-    internal ZoneSystem ZoneSystem { get; set; }
-
-    [Inject]
-    internal EconomySystem EconomySystem { get; set; }
 
     public override async Task Reset(
         CancellationToken cancellation = new CancellationToken()
@@ -64,15 +57,15 @@ public sealed class RM2026ucLifeSystem : LifeSystem
         var cost = CalcBuyReviveRequiredCoin(id);
         if (id.Camp == Camp.Red)
         {
-            if (EconomySystem.RedCoin < cost)
+            if (economySystem.RedCoin < cost)
                 return false;
-            EconomySystem.RedCoin -= cost;
+            economySystem.RedCoin -= cost;
         }
         else if (id.Camp == Camp.Blue)
         {
-            if (EconomySystem.BlueCoin < cost)
+            if (economySystem.BlueCoin < cost)
                 return false;
-            EconomySystem.BlueCoin -= cost;
+            economySystem.BlueCoin -= cost;
         }
         else
         {
@@ -208,7 +201,7 @@ public sealed class RM2026ucLifeSystem : LifeSystem
         };
         var b = EntitySystem.Entities[baseId] as Base;
         var delta = 1;
-        if (SupplySystem.IsInSupplyZone(ZoneSystem, healthed.Id))
+        if (SupplySystem.IsInSupplyZone(zoneSystem, healthed.Id))
         {
             delta = 4;
         }

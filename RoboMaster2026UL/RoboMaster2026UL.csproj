@@ -6,6 +6,7 @@
         <Nullable>enable</Nullable>
         <AssemblyName>RoboSouls.JudgeSystem.RoboMaster2026UL</AssemblyName>
         <RootNamespace>RoboSouls.JudgeSystem.RoboMaster2026UL</RootNamespace>
+        <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     </PropertyGroup>
 
     <ItemGroup>
@@ -15,9 +16,11 @@
     <ItemGroup>
       <Reference Include="VContainer">
         <HintPath>..\Lib\VContainer.dll</HintPath>
+          <Private>false</Private>
       </Reference>
       <Reference Include="VContainer.SourceGenerator">
         <HintPath>..\Lib\VContainer.SourceGenerator.dll</HintPath>
+          <Private>false</Private>
       </Reference>
     </ItemGroup>
 

@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using RoboSouls.JudgeSystem.RoboMaster2026UC.Entities;
 using RoboSouls.JudgeSystem.RoboMaster2026UC.Events;
 using RoboSouls.JudgeSystem.Systems;
-using VContainer;
 using VitalRouter;
 
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
@@ -20,44 +19,27 @@ namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 /// “表 5-8 兑换规则” 。
 /// 每局比赛中，空中机器人拥有 1500 发允许发弹量
 /// </summary>
-public sealed class AerialSystem : ISystem
+public sealed class AerialSystem(
+    EntitySystem entitySystem,
+    ITimeSystem timeSystem,
+    ICacheWriter<bool> boolCacheBoxWriter,
+    ICacheWriter<float> floatCacheBoxWriter,
+    ICacheProvider<double> doubleCache,
+    ICommandPublisher publisher,
+    EconomySystem economySystem,
+    BattleSystem battleSystem,
+    ModuleSystem moduleSystem)
+    : ISystem
 {
     public const int AerialAmmoAllowance = 1500;
 
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
-
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
-
-    [Inject]
-    internal ICacheWriter<bool> BoolCacheBoxWriter { get; set; }
-
-    [Inject]
-    internal ICacheWriter<float> FloatCacheBoxWriter { get; set; }
-
-    [Inject]
-    internal ICacheProvider<double> DoubleCache { get; set; }
-
-    [Inject]
-    internal ICommandPublisher Publisher { get; set; }
-
-    [Inject]
-    internal EconomySystem EconomySystem { get; set; }
-
-    [Inject]
-    internal BattleSystem BattleSystem { get; set; }
-
-    [Inject]
-    internal ModuleSystem ModuleSystem { get; set; }
-
     public Task Reset(CancellationToken cancellation = new CancellationToken())
     {
-        TimeSystem.RegisterRepeatAction(
+        timeSystem.RegisterRepeatAction(
             1,
             () =>
             {
-                if (EntitySystem.TryGetOperatedEntity(Identity.RedAerial, out Aerial redAerial))
+                if (entitySystem.TryGetOperatedEntity(Identity.RedAerial, out Aerial redAerial))
                 {
                     return AirStrikeTimeSettlement(redAerial);
                 }
@@ -66,12 +48,12 @@ public sealed class AerialSystem : ISystem
             }
         );
 
-        TimeSystem.RegisterRepeatAction(
+        timeSystem.RegisterRepeatAction(
             1,
             () =>
             {
                 if (
-                    EntitySystem.TryGetOperatedEntity(
+                    entitySystem.TryGetOperatedEntity(
                         Identity.BlueAerial,
                         out Aerial blueAerial
                     )
@@ -84,47 +66,47 @@ public sealed class AerialSystem : ISystem
             }
         );
 
-        SetAirStrikeTime(EntitySystem.Entities[Identity.RedAerial] as Aerial, 0);
-        SetAirStrikeTime(EntitySystem.Entities[Identity.BlueAerial] as Aerial, 0);
+        SetAirStrikeTime(entitySystem.Entities[Identity.RedAerial] as Aerial, 0);
+        SetAirStrikeTime(entitySystem.Entities[Identity.BlueAerial] as Aerial, 0);
 
-        TimeSystem.RegisterOnceAction(
+        timeSystem.RegisterOnceAction(
             JudgeSystemStage.Match,
             0,
             () =>
             {
-                AddAirStrikeTime(EntitySystem.Entities[Identity.RedAerial] as Aerial, 30);
-                AddAirStrikeTime(EntitySystem.Entities[Identity.BlueAerial] as Aerial, 30);
+                AddAirStrikeTime(entitySystem.Entities[Identity.RedAerial] as Aerial, 30);
+                AddAirStrikeTime(entitySystem.Entities[Identity.BlueAerial] as Aerial, 30);
             }
         );
 
         void AddAct()
         {
-            AddAirStrikeTime(EntitySystem.Entities[Identity.RedAerial] as Aerial, 20);
-            AddAirStrikeTime(EntitySystem.Entities[Identity.BlueAerial] as Aerial, 20);
+            AddAirStrikeTime(entitySystem.Entities[Identity.RedAerial] as Aerial, 20);
+            AddAirStrikeTime(entitySystem.Entities[Identity.BlueAerial] as Aerial, 20);
         }
 
-        TimeSystem.RegisterOnceAction(JudgeSystemStage.Match, 60, AddAct);
-        TimeSystem.RegisterOnceAction(JudgeSystemStage.Match, 120, AddAct);
-        TimeSystem.RegisterOnceAction(JudgeSystemStage.Match, 180, AddAct);
-        TimeSystem.RegisterOnceAction(JudgeSystemStage.Match, 240, AddAct);
-        TimeSystem.RegisterOnceAction(JudgeSystemStage.Match, 300, AddAct);
-        TimeSystem.RegisterOnceAction(JudgeSystemStage.Match, 360, AddAct);
+        timeSystem.RegisterOnceAction(JudgeSystemStage.Match, 60, AddAct);
+        timeSystem.RegisterOnceAction(JudgeSystemStage.Match, 120, AddAct);
+        timeSystem.RegisterOnceAction(JudgeSystemStage.Match, 180, AddAct);
+        timeSystem.RegisterOnceAction(JudgeSystemStage.Match, 240, AddAct);
+        timeSystem.RegisterOnceAction(JudgeSystemStage.Match, 300, AddAct);
+        timeSystem.RegisterOnceAction(JudgeSystemStage.Match, 360, AddAct);
 
-        TimeSystem.RegisterOnceAction(
+        timeSystem.RegisterOnceAction(
             JudgeSystemStage.Match,
             0,
             () =>
             {
-                BattleSystem.SetAmmoAllowance(
-                    EntitySystem.Entities[Identity.RedAerial] as Aerial,
+                battleSystem.SetAmmoAllowance(
+                    entitySystem.Entities[Identity.RedAerial] as Aerial,
                     AerialAmmoAllowance
                 );
-                BattleSystem.SetAmmoAllowance(
-                    EntitySystem.Entities[Identity.BlueAerial] as Aerial,
+                battleSystem.SetAmmoAllowance(
+                    entitySystem.Entities[Identity.BlueAerial] as Aerial,
                     AerialAmmoAllowance
                 );
-                SetIsAirStriking(EntitySystem.Entities[Identity.RedAerial] as Aerial, false);
-                SetIsAirStriking(EntitySystem.Entities[Identity.BlueAerial] as Aerial, false);
+                SetIsAirStriking(entitySystem.Entities[Identity.RedAerial] as Aerial, false);
+                SetIsAirStriking(entitySystem.Entities[Identity.BlueAerial] as Aerial, false);
             }
         );
 
@@ -144,7 +126,7 @@ public sealed class AerialSystem : ISystem
             _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null),
         };
 
-        if (!EntitySystem.TryGetOperatedEntity(aerialId, out Aerial aerial))
+        if (!entitySystem.TryGetOperatedEntity(aerialId, out Aerial aerial))
             return;
 
         if (TryGetIsAirStrikeCoolingDown(aerialId, out _))
@@ -162,7 +144,7 @@ public sealed class AerialSystem : ISystem
             _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null),
         };
 
-        if (!EntitySystem.TryGetOperatedEntity(aerialId, out Aerial aerial))
+        if (!entitySystem.TryGetOperatedEntity(aerialId, out Aerial aerial))
             return;
 
         SetIsAirStriking(aerial, false);
@@ -170,26 +152,26 @@ public sealed class AerialSystem : ISystem
 
     private void SetIsAirStriking(Aerial aerial, bool isAirStriking)
     {
-        ModuleSystem.SetGunLocked(aerial.Id, !isAirStriking);
+        moduleSystem.SetGunLocked(aerial.Id, !isAirStriking);
 
         if (aerial.IsAirStriking == isAirStriking)
             return;
 
-        BoolCacheBoxWriter
+        boolCacheBoxWriter
             .WithWriterNamespace(aerial.Id)
             .Save(Aerial.IsAirStrikingCacheKey, isAirStriking);
 
         if (isAirStriking)
         {
-            var t = TimeSystem.Time;
+            var t = timeSystem.Time;
             SetAirStrikeStartTime(aerial.Id, t);
-            Publisher.PublishAsync(new AirstrikeStartEvent(aerial.Id, t));
+            publisher.PublishAsync(new AirstrikeStartEvent(aerial.Id, t));
         }
         else
         {
-            var t = TimeSystem.Time;
+            var t = timeSystem.Time;
             SetAirStrikeStopTime(aerial.Id, t);
-            Publisher.PublishAsync(new AirstrikeStopEvent(aerial.Id, t));
+            publisher.PublishAsync(new AirstrikeStopEvent(aerial.Id, t));
         }
     }
 
@@ -216,7 +198,7 @@ public sealed class AerialSystem : ISystem
         }
 
         var cooldownRequired = CalculateAirStrikeCooldownTime(elapsed);
-        var cooldownElapsed = TimeSystem.Time - stopped;
+        var cooldownElapsed = timeSystem.Time - stopped;
         cooldownRemaining = cooldownRequired - cooldownElapsed;
         return cooldownRemaining > 0;
     }
@@ -226,12 +208,12 @@ public sealed class AerialSystem : ISystem
 
     public double GetAirStrikeStartTime(in Identity id)
     {
-        return DoubleCache.WithReaderNamespace(id).Load(AirstrikeStartTimeCacheKey);
+        return doubleCache.WithReaderNamespace(id).Load(AirstrikeStartTimeCacheKey);
     }
 
     private void SetAirStrikeStartTime(in Identity id, double time)
     {
-        DoubleCache.WithWriterNamespace(id).Save(AirstrikeStartTimeCacheKey, time);
+        doubleCache.WithWriterNamespace(id).Save(AirstrikeStartTimeCacheKey, time);
     }
 
     private void AddAirStrikeTime(Aerial aerial, float time)
@@ -242,19 +224,19 @@ public sealed class AerialSystem : ISystem
 
     private void SetAirStrikeTime(Aerial aerial, float time)
     {
-        FloatCacheBoxWriter
+        floatCacheBoxWriter
             .WithWriterNamespace(aerial.Id)
             .Save(Aerial.AirStrikeTimeRemainingCacheKey, time);
     }
 
     private void SetAirStrikeStopTime(in Identity id, double time)
     {
-        DoubleCache.WithWriterNamespace(id).Save(AirstrikeStopTimeCacheKey, time);
+        doubleCache.WithWriterNamespace(id).Save(AirstrikeStopTimeCacheKey, time);
     }
 
     public double GetAirStrikeStopTime(in Identity id)
     {
-        return DoubleCache.WithReaderNamespace(id).Load(AirstrikeStopTimeCacheKey);
+        return doubleCache.WithReaderNamespace(id).Load(AirstrikeStopTimeCacheKey);
     }
 
     /// <summary>
@@ -268,7 +250,7 @@ public sealed class AerialSystem : ISystem
             return Task.CompletedTask;
 
         if (
-            TimeSystem.Time - GetAirStrikeStartTime(aerial.Id)
+            timeSystem.Time - GetAirStrikeStartTime(aerial.Id)
             >= RM2026ucPerformanceSystem.MaxAerialStrikeTime
         )
         {
@@ -283,9 +265,9 @@ public sealed class AerialSystem : ISystem
         {
             if (aerial.Id.Camp == Camp.Red)
             {
-                if (EconomySystem.RedCoin > 1)
+                if (economySystem.RedCoin > 1)
                 {
-                    EconomySystem.RedCoin -= 1;
+                    economySystem.RedCoin -= 1;
                 }
                 else
                 {
@@ -294,9 +276,9 @@ public sealed class AerialSystem : ISystem
             }
             else if (aerial.Id.Camp == Camp.Blue)
             {
-                if (EconomySystem.BlueCoin > 1)
+                if (economySystem.BlueCoin > 1)
                 {
-                    EconomySystem.BlueCoin -= 1;
+                    economySystem.BlueCoin -= 1;
                 }
                 else
                 {

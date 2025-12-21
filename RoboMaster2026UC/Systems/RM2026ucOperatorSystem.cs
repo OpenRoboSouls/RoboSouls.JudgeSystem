@@ -1,18 +1,14 @@
 ﻿using RoboSouls.JudgeSystem.Systems;
-using VContainer;
 
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 
-public sealed class RM2026ucOperatorSystem : OperatorSystem
+public sealed class RM2026ucOperatorSystem(ICacheProvider<byte> byteCacheBox) : OperatorSystem
 {
     private static readonly int ControlModeCacheKey = "control_mode".Sum();
 
-    [Inject]
-    internal ICacheProvider<byte> ByteCacheBox { get; set; }
-
     public ControlMode GetControlMode(in Identity id)
     {
-        var value = ByteCacheBox
+        var value = byteCacheBox
             .WithReaderNamespace(id)
             .TryLoad(ControlModeCacheKey, out var mode)
             ? mode
@@ -28,14 +24,14 @@ public sealed class RM2026ucOperatorSystem : OperatorSystem
 
         if (id.IsEngineer())
         {
-            ByteCacheBox.WithWriterNamespace(id).Save(ControlModeCacheKey, (byte)mode);
+            byteCacheBox.WithWriterNamespace(id).Save(ControlModeCacheKey, (byte)mode);
             return true;
         }
         else if (id.IsSentry() || id.IsHero())
         {
             if (mode == ControlMode.AutoExchange)
                 return false;
-            ByteCacheBox.WithWriterNamespace(id).Save(ControlModeCacheKey, (byte)mode);
+            byteCacheBox.WithWriterNamespace(id).Save(ControlModeCacheKey, (byte)mode);
             return true;
         }
 

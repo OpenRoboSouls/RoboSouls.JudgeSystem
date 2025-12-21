@@ -59,6 +59,6 @@ public sealed partial class ZoneSystem : ISystem
 
     public bool IsInAnyZone(in Identity entity)
     {
-        return _entityInZones.TryGetValue(entity, out var zones) && zones.Any(z => z.ID < 200);
+        return _entityInZones.TryGetValue(entity, out var zones) && zones.Any(z => z.Id < 200);
     }
 }

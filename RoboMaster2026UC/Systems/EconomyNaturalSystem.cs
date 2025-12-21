@@ -1,7 +1,6 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using RoboSouls.JudgeSystem.Systems;
-using VContainer;
 
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 
@@ -17,46 +16,39 @@ namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 /// 01:59 50 50
 /// 00:59 150 150
 /// </summary>
-public sealed class EconomyNaturalSystem : ISystem
+public sealed class EconomyNaturalSystem(
+    EconomySystem economySystem,
+    ITimeSystem timeSystem,
+    ILogger logger,
+    IMatchConfigurationRM2026uc matchConfiguration)
+    : ISystem
 {
-    [Inject]
-    internal EconomySystem EconomySystem { get; set; }
-
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
-
-    [Inject]
-    internal ILogger Logger { get; set; }
-
-    [Inject]
-    internal IMatchConfigurationRM2026uc MatchConfiguration { get; set; }
-
     public Task Reset(CancellationToken cancellation = new CancellationToken())
     {
-        TimeSystem.RegisterOnceAction(
+        timeSystem.RegisterOnceAction(
             JudgeSystemStage.Match,
             0,
             () =>
             {
-                EconomySystem.RedCoin = MatchConfiguration.GetInitialCoin(Camp.Red);
-                EconomySystem.BlueCoin = MatchConfiguration.GetInitialCoin(Camp.Blue);
+                economySystem.RedCoin = matchConfiguration.GetInitialCoin(Camp.Red);
+                economySystem.BlueCoin = matchConfiguration.GetInitialCoin(Camp.Blue);
             }
         );
-        TimeSystem.RegisterOnceAction(JudgeSystemStage.Match, 60, () => BothSideAddMoney(50));
-        TimeSystem.RegisterOnceAction(JudgeSystemStage.Match, 120, () => BothSideAddMoney(50));
-        TimeSystem.RegisterOnceAction(JudgeSystemStage.Match, 180, () => BothSideAddMoney(50));
-        TimeSystem.RegisterOnceAction(JudgeSystemStage.Match, 240, () => BothSideAddMoney(50));
-        TimeSystem.RegisterOnceAction(JudgeSystemStage.Match, 300, () => BothSideAddMoney(50));
-        TimeSystem.RegisterOnceAction(JudgeSystemStage.Match, 360, () => BothSideAddMoney(150));
+        timeSystem.RegisterOnceAction(JudgeSystemStage.Match, 60, () => BothSideAddMoney(50));
+        timeSystem.RegisterOnceAction(JudgeSystemStage.Match, 120, () => BothSideAddMoney(50));
+        timeSystem.RegisterOnceAction(JudgeSystemStage.Match, 180, () => BothSideAddMoney(50));
+        timeSystem.RegisterOnceAction(JudgeSystemStage.Match, 240, () => BothSideAddMoney(50));
+        timeSystem.RegisterOnceAction(JudgeSystemStage.Match, 300, () => BothSideAddMoney(50));
+        timeSystem.RegisterOnceAction(JudgeSystemStage.Match, 360, () => BothSideAddMoney(150));
 
         return Task.CompletedTask;
     }
 
     private Task BothSideAddMoney(int money)
     {
-        Logger.Info($"[EconomyNatural] Both side add money: {money}");
-        EconomySystem.RedCoin += money;
-        EconomySystem.BlueCoin += money;
+        logger.Info($"[EconomyNatural] Both side add money: {money}");
+        economySystem.RedCoin += money;
+        economySystem.BlueCoin += money;
 
         return Task.CompletedTask;
     }

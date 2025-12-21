@@ -16,7 +16,16 @@ namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 /// 基地机制
 /// </summary>
 [Routes]
-public sealed partial class BaseSystem : ISystem
+public sealed partial class BaseSystem(
+    ICacheProvider<bool> boolCacheBox,
+    LifeSystem lifeSystem,
+    EntitySystem entitySystem,
+    ICommandPublisher publisher,
+    BuffSystem buffSystem,
+    ITimeSystem timeSystem,
+    JudgeBotSystem judgeBotSystem,
+    ZoneSystem zoneSystem)
+    : ISystem
 {
     [Inject]
     internal void Inject(Router router)
@@ -36,37 +45,13 @@ public sealed partial class BaseSystem : ISystem
 
     private static readonly int BaseZoneDeactivatedCacheKey = "BaseZoneDeactivated".Sum();
 
-    [Inject]
-    internal ICacheProvider<bool> BoolCacheBox { get; set; }
-
-    [Inject]
-    internal LifeSystem LifeSystem { get; set; }
-
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
-
-    [Inject]
-    internal ICommandPublisher Publisher { get; set; }
-
-    [Inject]
-    internal BuffSystem BuffSystem { get; set; }
-
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
-
-    [Inject]
-    internal JudgeBotSystem JudgeBotSystem { get; set; }
-
-    [Inject]
-    internal ZoneSystem ZoneSystem { get; set; }
-
     public Task Reset(CancellationToken cancellation = new CancellationToken())
     {
-        var redBase = EntitySystem.Entities[Identity.RedBase] as Base;
-        var blueBase = EntitySystem.Entities[Identity.BlueBase] as Base;
+        var redBase = entitySystem.Entities[Identity.RedBase] as Base;
+        var blueBase = entitySystem.Entities[Identity.BlueBase] as Base;
 
-        LifeSystem.SetInvincible(redBase, true);
-        LifeSystem.SetInvincible(blueBase, true);
+        lifeSystem.SetInvincible(redBase, true);
+        lifeSystem.SetInvincible(blueBase, true);
 
         SetArmorOpen(redBase, false);
         SetArmorOpen(blueBase, false);
@@ -74,42 +59,42 @@ public sealed partial class BaseSystem : ISystem
         SetBaseZoneDeactivated(Camp.Red, false);
         SetBaseZoneDeactivated(Camp.Blue, false);
 
-        TimeSystem.RegisterOnceAction(
+        timeSystem.RegisterOnceAction(
             JudgeSystemStage.Countdown,
             1,
             FalseStartDetectLoop(Camp.Red)
         );
-        TimeSystem.RegisterOnceAction(
+        timeSystem.RegisterOnceAction(
             JudgeSystemStage.Countdown,
             1,
             FalseStartDetectLoop(Camp.Blue)
         );
-        TimeSystem.RegisterOnceAction(
+        timeSystem.RegisterOnceAction(
             JudgeSystemStage.Countdown,
             2,
             FalseStartDetectLoop(Camp.Red)
         );
-        TimeSystem.RegisterOnceAction(
+        timeSystem.RegisterOnceAction(
             JudgeSystemStage.Countdown,
             2,
             FalseStartDetectLoop(Camp.Blue)
         );
-        TimeSystem.RegisterOnceAction(
+        timeSystem.RegisterOnceAction(
             JudgeSystemStage.Countdown,
             3,
             FalseStartDetectLoop(Camp.Red)
         );
-        TimeSystem.RegisterOnceAction(
+        timeSystem.RegisterOnceAction(
             JudgeSystemStage.Countdown,
             3,
             FalseStartDetectLoop(Camp.Blue)
         );
-        TimeSystem.RegisterOnceAction(
+        timeSystem.RegisterOnceAction(
             JudgeSystemStage.Countdown,
             4,
             FalseStartDetectLoop(Camp.Red)
         );
-        TimeSystem.RegisterOnceAction(
+        timeSystem.RegisterOnceAction(
             JudgeSystemStage.Countdown,
             4,
             FalseStartDetectLoop(Camp.Blue)
@@ -130,15 +115,15 @@ public sealed partial class BaseSystem : ISystem
         return () =>
         {
             foreach (
-                var robot in EntitySystem
+                var robot in entitySystem
                     .Entities.Values.OfType<IHealthed>()
                     .OfType<IRobot>()
                     .Select(r => r.Id)
                     .Where(i => i.Camp == camp)
-                    .Where(i => !ZoneSystem.IsInZone(i, baseZone))
+                    .Where(i => !zoneSystem.IsInZone(i, baseZone))
             )
             {
-                JudgeBotSystem.Penalty(
+                judgeBotSystem.Penalty(
                     Identity.Server,
                     robot,
                     PenaltyType.RedCard,
@@ -161,14 +146,14 @@ public sealed partial class BaseSystem : ISystem
         Base b;
         if (evt.Victim.Camp == Camp.Red)
         {
-            b = EntitySystem.Entities[Identity.RedBase] as Base;
+            b = entitySystem.Entities[Identity.RedBase] as Base;
         }
         else
         {
-            b = EntitySystem.Entities[Identity.BlueBase] as Base;
+            b = entitySystem.Entities[Identity.BlueBase] as Base;
         }
 
-        LifeSystem.SetInvincible(b, false);
+        lifeSystem.SetInvincible(b, false);
     }
 
     /// <summary>
@@ -182,7 +167,7 @@ public sealed partial class BaseSystem : ISystem
     [Route]
     private void OnEnterBaseZone(EnterZoneEvent evt)
     {
-        if (TimeSystem.Stage != JudgeSystemStage.Match)
+        if (timeSystem.Stage != JudgeSystemStage.Match)
             return;
         if (evt.ZoneId != RedBaseZoneId && evt.ZoneId != BlueBaseZoneId)
             return;
@@ -191,8 +176,8 @@ public sealed partial class BaseSystem : ISystem
         if (IsBaseZoneDeactivated(evt.ZoneId.Camp))
             return;
 
-        BuffSystem.AddBuff(evt.OperatorId, Buffs.DefenceBuff, 0.5f, TimeSpan.MaxValue);
-        var cooldownBuffValue = TimeSystem.StageTimeElapsed switch
+        buffSystem.AddBuff(evt.OperatorId, Buffs.DefenceBuff, 0.5f, TimeSpan.MaxValue);
+        var cooldownBuffValue = timeSystem.StageTimeElapsed switch
         {
             >= 120 and < 180 => 2,
             >= 180 and < 300 => 3,
@@ -201,7 +186,7 @@ public sealed partial class BaseSystem : ISystem
         };
         if (cooldownBuffValue > 0)
         {
-            BuffSystem.AddBuff(
+            buffSystem.AddBuff(
                 evt.OperatorId,
                 Buffs.CoolDownBuff,
                 cooldownBuffValue,
@@ -209,7 +194,7 @@ public sealed partial class BaseSystem : ISystem
             );
         }
             
-        BuffSystem.RemoveBuff(evt.OperatorId, RM2026ucBuffs.WeakenedBuff);
+        buffSystem.RemoveBuff(evt.OperatorId, RM2026ucBuffs.WeakenedBuff);
     }
 
     [Route]
@@ -220,10 +205,10 @@ public sealed partial class BaseSystem : ISystem
         if (evt.OperatorId.Camp != evt.ZoneId.Camp)
             return;
 
-        if (TimeSystem.Stage == JudgeSystemStage.Match)
+        if (timeSystem.Stage == JudgeSystemStage.Match)
         {
-            BuffSystem.RemoveBuff(evt.OperatorId, Buffs.DefenceBuff);
-            BuffSystem.RemoveBuff(evt.OperatorId, Buffs.CoolDownBuff);
+            buffSystem.RemoveBuff(evt.OperatorId, Buffs.DefenceBuff);
+            buffSystem.RemoveBuff(evt.OperatorId, Buffs.CoolDownBuff);
         }
     }
 
@@ -236,7 +221,7 @@ public sealed partial class BaseSystem : ISystem
             _ => throw new ArgumentOutOfRangeException(),
         };
 
-        var b = EntitySystem.Entities[baseId] as Base;
+        var b = entitySystem.Entities[baseId] as Base;
 
         if (b.Health > 2000)
             return;
@@ -264,15 +249,15 @@ public sealed partial class BaseSystem : ISystem
         if (b.IsArmorOpen == open)
             return;
 
-        BoolCacheBox.WithWriterNamespace(b.Id).Save(Base.ArmorOpenCacheKey, open);
+        boolCacheBox.WithWriterNamespace(b.Id).Save(Base.ArmorOpenCacheKey, open);
 
-        Publisher.PublishAsync(new BaseArmorOpenEvent(b.Id));
+        publisher.PublishAsync(new BaseArmorOpenEvent(b.Id));
     }
 
     public bool IsBaseZoneDeactivated(Camp camp)
     {
         var id = camp == Camp.Red ? RedBaseZoneId : BlueBaseZoneId;
-        return BoolCacheBox
+        return boolCacheBox
             .WithReaderNamespace(id)
             .TryLoad(BaseZoneDeactivatedCacheKey, out var deactivated) && deactivated;
     }
@@ -280,6 +265,6 @@ public sealed partial class BaseSystem : ISystem
     private void SetBaseZoneDeactivated(Camp camp, bool deactivated)
     {
         var id = camp == Camp.Red ? RedBaseZoneId : BlueBaseZoneId;
-        BoolCacheBox.WithWriterNamespace(id).Save(BaseZoneDeactivatedCacheKey, deactivated);
+        boolCacheBox.WithWriterNamespace(id).Save(BaseZoneDeactivatedCacheKey, deactivated);
     }
 }

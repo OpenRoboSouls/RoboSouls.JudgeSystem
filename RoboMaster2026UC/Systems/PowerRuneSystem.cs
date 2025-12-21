@@ -16,7 +16,18 @@ namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 /// <summary>
 /// 能量机关机制
 /// </summary>
-public class PowerRuneSystem : ISystem
+public class PowerRuneSystem(
+    ITimeSystem timeSystem,
+    ILogger logger,
+    ICommandPublisher publisher,
+    BuffSystem buffSystem,
+    ICacheProvider<bool> boolCacheBox,
+    ICacheProvider<int> intCacheBox,
+    ICacheProvider<double> doubleCacheBox,
+    EntitySystem entitySystem,
+    ExperienceSystem experienceSystem,
+    IMatchConfiguration matchConfiguration)
+    : ISystem
 {
     private static readonly int PowerRuneActivateCacheKey = "PowerRuneActivate".Sum();
     private static readonly int PowerRuneRecordCacheKey = "PowerRuneRecord".Sum();
@@ -27,78 +38,49 @@ public class PowerRuneSystem : ISystem
 
     private bool _isPowerRuneClockwise;
 
-    public PowerRuneSystem(ExperienceSystem experienceSystem)
+    [Inject]
+    internal void Inject(ExperienceSystem e)
     {
         experienceSystem.OnExpChange += OnExpChange;
     }
 
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
-
-    [Inject]
-    internal ILogger Logger { get; set; }
-
-    [Inject]
-    internal ICommandPublisher Publisher { get; set; }
-
-    [Inject]
-    internal BuffSystem BuffSystem { get; set; }
-
-    [Inject]
-    internal ICacheProvider<bool> BoolCacheBox { get; set; }
-
-    [Inject]
-    internal ICacheProvider<int> IntCacheBox { get; set; }
-
-    [Inject]
-    internal ICacheProvider<double> DoubleCacheBox { get; set; }
-
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
-
-    [Inject]
-    internal ExperienceSystem ExperienceSystem { get; set; }
-
-    [Inject]
-    internal IMatchConfiguration MatchConfiguration { get; set; }
-
     public Task Reset(CancellationToken cancellation = new CancellationToken())
     {
-        _isPowerRuneClockwise = MatchConfiguration.Random.Next(0, 2) == 0;
+        _isPowerRuneClockwise = matchConfiguration.Random.Next(0, 2) == 0;
 
         SetPowerRuneCanActivate(Camp.Red, false);
         SetPowerRuneCanActivate(Camp.Blue, false);
 
-        TimeSystem.RegisterOnceAction(
+        timeSystem.RegisterOnceAction(
             JudgeSystemStage.Match,
             0,
             async () =>
             {
-                await Publisher.PublishAsync(new PowerRuneStopEvent(Camp.Red));
-                await Publisher.PublishAsync(new PowerRuneStopEvent(Camp.Blue));
+                await publisher.PublishAsync(new PowerRuneStopEvent(Camp.Red));
+                await publisher.PublishAsync(new PowerRuneStopEvent(Camp.Blue));
             }
         );
 
-        TimeSystem.RegisterOnceAction(JudgeSystemStage.Match, 5, StartSmallPowerRune);
-        TimeSystem.RegisterOnceAction(JudgeSystemStage.Match, 90, StartSmallPowerRune);
+        timeSystem.RegisterOnceAction(JudgeSystemStage.Match, 5, StartSmallPowerRune);
+        timeSystem.RegisterOnceAction(JudgeSystemStage.Match, 90, StartSmallPowerRune);
 
         return Task.CompletedTask;
     }
 
     public double GetPowerRuneTime(Camp camp)
     {
-        var startTime = DoubleCacheBox
+        var startTime = doubleCacheBox
             .WithReaderNamespace(new Identity(camp, 0))
             .TryLoad(PowerRuneStartTimeCacheKey, out var time)
             ? time
             : 0;
 
-        return TimeSystem.StageTimeElapsed - startTime;
+        return timeSystem.StageTimeElapsed - startTime;
     }
 
     private void SetPowerRuneStartTime(Camp camp, double time)
     {
-        DoubleCacheBox
+        doubleCacheBox
             .WithWriterNamespace(new Identity(camp, 0))
             .Save(PowerRuneStartTimeCacheKey, time);
     }
@@ -111,12 +93,12 @@ public class PowerRuneSystem : ISystem
     /// <returns></returns>
     private Task StartSmallPowerRune()
     {
-        Logger.Info("Small Power Rune Start");
+        logger.Info("Small Power Rune Start");
         SetPowerRuneCanActivate(Camp.Red, true);
         SetPowerRuneCanActivate(Camp.Blue, true);
-        SetPowerRuneStartTime(Camp.Red, TimeSystem.StageTimeElapsed);
-        TimeSystem.RegisterOnceAction(30, CancelPowerRune);
-        return Publisher
+        SetPowerRuneStartTime(Camp.Red, timeSystem.StageTimeElapsed);
+        timeSystem.RegisterOnceAction(30, CancelPowerRune);
+        return publisher
             .PublishAsync(new PowerRuneStartEvent(false, default, _isPowerRuneClockwise))
             .AsTask();
     }
@@ -130,12 +112,12 @@ public class PowerRuneSystem : ISystem
     private Task StartBigPowerRune()
     {
         var options = BigPowerRuneOptions.RandomPowerRuneOptions();
-        Logger.Info($"Big Power Rune Start: A={options.A}, W={options.W}, B={options.B}");
+        logger.Info($"Big Power Rune Start: A={options.A}, W={options.W}, B={options.B}");
         SetPowerRuneCanActivate(Camp.Red, true);
         SetPowerRuneCanActivate(Camp.Blue, true);
-        SetPowerRuneStartTime(Camp.Red, TimeSystem.StageTimeElapsed);
-        TimeSystem.RegisterOnceAction(20, CancelPowerRune);
-        return Publisher
+        SetPowerRuneStartTime(Camp.Red, timeSystem.StageTimeElapsed);
+        timeSystem.RegisterOnceAction(20, CancelPowerRune);
+        return publisher
             .PublishAsync(new PowerRuneStartEvent(true, options, _isPowerRuneClockwise))
             .AsTask();
     }
@@ -145,17 +127,17 @@ public class PowerRuneSystem : ISystem
         var redCanActivate = CanPowerRuneActivate(Camp.Red);
         if (redCanActivate)
         {
-            Logger.Info("Cancel Power Rune: Red");
+            logger.Info("Cancel Power Rune: Red");
             SetPowerRuneCanActivate(Camp.Red, false);
-            await Publisher.PublishAsync(new PowerRuneStopEvent(Camp.Red));
+            await publisher.PublishAsync(new PowerRuneStopEvent(Camp.Red));
         }
 
         var blueCanActivate = CanPowerRuneActivate(Camp.Blue);
         if (blueCanActivate)
         {
-            Logger.Info("Cancel Power Rune: Blue");
+            logger.Info("Cancel Power Rune: Blue");
             SetPowerRuneCanActivate(Camp.Blue, false);
-            await Publisher.PublishAsync(new PowerRuneStopEvent(Camp.Blue));
+            await publisher.PublishAsync(new PowerRuneStopEvent(Camp.Blue));
         }
     }
 
@@ -166,7 +148,7 @@ public class PowerRuneSystem : ISystem
             return;
         }
 
-        Logger.Info($"Small Power Rune Activated by {camp}");
+        logger.Info($"Small Power Rune Activated by {camp}");
 
         // SetPowerRuneCanActivate(Camp.Red, false);
         // SetPowerRuneCanActivate(Camp.Blue, false);
@@ -176,26 +158,26 @@ public class PowerRuneSystem : ISystem
             
         // 2025uc v2.1.0
         SetPowerRuneCanActivate(camp, false);
-        Publisher.PublishAsync(new PowerRuneActivatedEvent(false, default, camp));
+        publisher.PublishAsync(new PowerRuneActivatedEvent(false, default, camp));
             
-        TimeSystem.RegisterOnceAction(
+        timeSystem.RegisterOnceAction(
             45,
             () =>
             {
-                Publisher.PublishAsync(new PowerRuneStopEvent(camp));
+                publisher.PublishAsync(new PowerRuneStopEvent(camp));
             }
         );
 
         // 一方机器人成功激活小能量机关后，该方所有机器人获得 25%的防御增益，持续 45 秒
-        var robots = EntitySystem
+        var robots = entitySystem
             .GetOperatedEntities<IExperienced>(camp)
             .Where(r => r is IRobot)
             .Select(s => s.Id);
 
         foreach (var robot in robots)
         {
-            BuffSystem.AddBuff(robot, Buffs.DefenceBuff, 0.25f, TimeSpan.FromSeconds(45));
-            BuffSystem.AddBuff(
+            buffSystem.AddBuff(robot, Buffs.DefenceBuff, 0.25f, TimeSpan.FromSeconds(45));
+            buffSystem.AddBuff(
                 robot,
                 RM2026ucBuffs.SmallPowerRuneBuff,
                 0,
@@ -203,20 +185,20 @@ public class PowerRuneSystem : ISystem
             );
         }
 
-        BuffSystem.AddBuff(
+        buffSystem.AddBuff(
             new Identity(camp, Identity.OutpostId),
             Buffs.DefenceBuff,
             0.75f,
             TimeSpan.FromSeconds(45)
         );
-        BuffSystem.AddBuff(
+        buffSystem.AddBuff(
             new Identity(camp, Identity.BaseId),
             Buffs.DefenceBuff,
             0.75f,
             TimeSpan.FromSeconds(45)
         );
 
-        SetLastPowerRuneActivateTime(camp, TimeSystem.Time);
+        SetLastPowerRuneActivateTime(camp, timeSystem.Time);
     }
 
     public void OnActivatedBigPowerRune(Camp camp, in PowerRuneActivateRecord record)
@@ -226,35 +208,35 @@ public class PowerRuneSystem : ISystem
             return;
         }
 
-        Logger.Info($"Big Power Rune Activated by {camp}, Record: {record.ToString()}");
+        logger.Info($"Big Power Rune Activated by {camp}, Record: {record.ToString()}");
 
         SetPowerRuneCanActivate(camp, false);
-        Publisher.PublishAsync(new PowerRuneActivatedEvent(true, record, camp));
-        TimeSystem.RegisterOnceAction(
+        publisher.PublishAsync(new PowerRuneActivatedEvent(true, record, camp));
+        timeSystem.RegisterOnceAction(
             45,
             () =>
             {
-                Publisher.PublishAsync(new PowerRuneStopEvent(camp));
+                publisher.PublishAsync(new PowerRuneStopEvent(camp));
             }
         );
 
         // 一方机器人激活大能量机关后， 系统将根据其击中的总环数为该方所有机器人提供相应的攻击和防御增益，
         // 为该方前哨站、基地提供相应的防御增益，详见“表 5-21 总环数与对应增益”。
-        var robots = EntitySystem
+        var robots = entitySystem
             .GetOperatedEntities<IExperienced>(camp)
             .Where(r => r is IRobot)
             .Select(s => s.Id)
-            .Append(new Identity(camp, Identity.RedOutpost.ID))
-            .Append(new Identity(camp, Identity.RedBase.ID));
+            .Append(new Identity(camp, Identity.RedOutpost.Id))
+            .Append(new Identity(camp, Identity.RedBase.Id));
         var totalRing = record.Total;
         var attackBuff = GetBigPowerRuneAttackBuffValue(totalRing);
         var defenceBuff = GetBigPowerRuneDefenceBuffValue(totalRing);
 
         foreach (var robot in robots)
         {
-            BuffSystem.AddBuff(robot, Buffs.AttackBuff, attackBuff, TimeSpan.FromSeconds(45));
-            BuffSystem.AddBuff(robot, Buffs.DefenceBuff, defenceBuff, TimeSpan.FromSeconds(45));
-            BuffSystem.AddBuff(
+            buffSystem.AddBuff(robot, Buffs.AttackBuff, attackBuff, TimeSpan.FromSeconds(45));
+            buffSystem.AddBuff(robot, Buffs.DefenceBuff, defenceBuff, TimeSpan.FromSeconds(45));
+            buffSystem.AddBuff(
                 robot,
                 RM2026ucBuffs.BigPowerRuneBuff,
                 0,
@@ -264,11 +246,11 @@ public class PowerRuneSystem : ISystem
 
         // 同时，大能量机关被激活时，
         // 将有 500 点经验平均分给激活方所有存活的英雄、步兵
-        var expRobots = EntitySystem
+        var expRobots = entitySystem
             .GetOperatedEntities<Hero>(camp)
             .Where(r => !r.IsDead())
             .Cast<IExperienced>()
-            .Concat(EntitySystem.GetOperatedEntities<Infantry>(camp).Where(r => !r.IsDead()))
+            .Concat(entitySystem.GetOperatedEntities<Infantry>(camp).Where(r => !r.IsDead()))
             .ToList();
 
         if (expRobots.Count > 0)
@@ -278,11 +260,11 @@ public class PowerRuneSystem : ISystem
 
             foreach (var robot in expRobots)
             {
-                ExperienceSystem.AddExp(robot, expPerRobot);
+                experienceSystem.AddExp(robot, expPerRobot);
             }
         }
 
-        SetLastPowerRuneActivateTime(camp, TimeSystem.Time);
+        SetLastPowerRuneActivateTime(camp, timeSystem.Time);
     }
 
     /// <summary>
@@ -295,7 +277,7 @@ public class PowerRuneSystem : ISystem
     private void OnExpChange(IExperienced experienced, int exp)
     {
         if (
-            !BuffSystem.TryGetBuff(experienced.Id, RM2026ucBuffs.SmallPowerRuneBuff, out Buff _)
+            !buffSystem.TryGetBuff(experienced.Id, RM2026ucBuffs.SmallPowerRuneBuff, out Buff _)
         )
             return;
         var expGained = GetSmallPowerRuneSessionExpGained(experienced.Id.Camp);
@@ -310,26 +292,26 @@ public class PowerRuneSystem : ISystem
         }
 
         SetSmallPowerRuneSessionExpGained(experienced.Id.Camp, expGained + exp);
-        ExperienceSystem.AddExp(experienced, exp, true);
+        experienceSystem.AddExp(experienced, exp, true);
     }
 
     public bool CanPowerRuneActivate(Camp camp)
     {
-        return BoolCacheBox
+        return boolCacheBox
             .WithReaderNamespace(new Identity(camp, 0))
             .TryLoad(PowerRuneActivateCacheKey, out var canActivate) && canActivate;
     }
 
     private void SetPowerRuneCanActivate(Camp camp, bool canActivate)
     {
-        BoolCacheBox
+        boolCacheBox
             .WithWriterNamespace(new Identity(camp, 0))
             .Save(PowerRuneActivateCacheKey, canActivate);
     }
 
     private int GetSmallPowerRuneSessionExpGained(Camp camp)
     {
-        return IntCacheBox
+        return intCacheBox
             .WithReaderNamespace(new Identity(camp, 0))
             .TryLoad(PowerRuneRecordCacheKey, out var exp)
             ? exp
@@ -338,7 +320,7 @@ public class PowerRuneSystem : ISystem
 
     private void SetSmallPowerRuneSessionExpGained(Camp camp, int exp)
     {
-        IntCacheBox
+        intCacheBox
             .WithWriterNamespace(new Identity(camp, 0))
             .Save(PowerRuneRecordCacheKey, exp);
     }
@@ -391,7 +373,7 @@ public class PowerRuneSystem : ISystem
 
     public int GetBigPowerRuneChanceMax()
     {
-        return TimeSystem.StageTimeElapsed switch
+        return timeSystem.StageTimeElapsed switch
         {
             > 330 => 3,
             > 255 => 2,
@@ -405,14 +387,14 @@ public class PowerRuneSystem : ISystem
 
     private int GetBigPowerRuneChanceElapsed(Camp camp)
     {
-        return IntCacheBox
+        return intCacheBox
             .WithReaderNamespace(new Identity(camp, 333))
             .Load(BigPowerRuneChanceElapsedCacheKey);
     }
 
     private void SetBigPowerRuneChanceElapsed(Camp camp, int elapsed)
     {
-        IntCacheBox
+        intCacheBox
             .WithWriterNamespace(new Identity(camp, 333))
             .Save(BigPowerRuneChanceElapsedCacheKey, elapsed);
     }
@@ -424,7 +406,7 @@ public class PowerRuneSystem : ISystem
 
     public double GetLastPowerRuneActivateTime(Camp camp)
     {
-        return DoubleCacheBox
+        return doubleCacheBox
             .WithReaderNamespace(new Identity(camp, 333))
             .TryLoad(PowerRuneActivateCacheKey, out var time)
             ? time
@@ -433,20 +415,20 @@ public class PowerRuneSystem : ISystem
 
     private void SetLastPowerRuneActivateTime(Camp camp, double time)
     {
-        DoubleCacheBox
+        doubleCacheBox
             .WithWriterNamespace(new Identity(camp, 333))
             .Save(PowerRuneActivateCacheKey, time);
     }
 
     public bool CanStartBigPowerRune(Camp camp)
     {
-        if (TimeSystem.Stage is not JudgeSystemStage.Match)
+        if (timeSystem.Stage is not JudgeSystemStage.Match)
             return false;
         if (GetBigPowerRuneChanceMax() <= 0)
             return false;
         if (GetBigPowerRuneChanceRemaining(camp) <= 0)
             return false;
-        if (TimeSystem.Time - GetLastPowerRuneActivateTime(camp) <= 20)
+        if (timeSystem.Time - GetLastPowerRuneActivateTime(camp) <= 20)
             return false;
         return true;
     }

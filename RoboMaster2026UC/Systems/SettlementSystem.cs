@@ -22,7 +22,12 @@ namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 /// 直至分出胜负。
 /// </summary>
 [Routes]
-public sealed partial class SettlementSystem : ISystem
+public sealed partial class SettlementSystem(
+    ITimeSystem timeSystem,
+    ICommandPublisher publisher,
+    EntitySystem entitySystem,
+    BattleSystem battleSystem)
+    : ISystem
 {
     [Inject]
     internal void Inject(Router router)
@@ -40,18 +45,6 @@ public sealed partial class SettlementSystem : ISystem
 
     private bool _currentRoundSettled;
 
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
-
-    [Inject]
-    internal ICommandPublisher Publisher { get; set; }
-
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
-
-    [Inject]
-    internal BattleSystem BattleSystem { get; set; }
-
     public Task Reset(CancellationToken cancellation = new CancellationToken())
     {
         _currentRoundSettled = false;
@@ -68,8 +61,8 @@ public sealed partial class SettlementSystem : ISystem
 
         _currentRoundSettled = true;
 
-        TimeSystem.SetStage(JudgeSystemStage.Settlement);
-        Publisher.PublishAsync(new MatchSettleEvent(winner, reason));
+        timeSystem.SetStage(JudgeSystemStage.Settlement);
+        publisher.PublishAsync(new MatchSettleEvent(winner, reason));
     }
 
     /// <summary>
@@ -86,8 +79,8 @@ public sealed partial class SettlementSystem : ISystem
         ;
 
         // 一局比赛时间耗尽时，双方基地均未被击毁，基地剩余血量高的一方获胜。
-        var redBase = EntitySystem.Entities[Identity.RedBase] as Base;
-        var blueBase = EntitySystem.Entities[Identity.BlueBase] as Base;
+        var redBase = entitySystem.Entities[Identity.RedBase] as Base;
+        var blueBase = entitySystem.Entities[Identity.BlueBase] as Base;
 
         if (!redBase.IsDead() && !blueBase.IsDead() && redBase.Health != blueBase.Health)
         {
@@ -99,8 +92,8 @@ public sealed partial class SettlementSystem : ISystem
         }
 
         // 一局比赛时间耗尽时，若双方基地剩余血量一致，前哨站剩余血量高的一方获胜。
-        var redOutpost = EntitySystem.Entities[Identity.RedOutpost] as Outpost;
-        var blueOutpost = EntitySystem.Entities[Identity.BlueOutpost] as Outpost;
+        var redOutpost = entitySystem.Entities[Identity.RedOutpost] as Outpost;
+        var blueOutpost = entitySystem.Entities[Identity.BlueOutpost] as Outpost;
 
         if (!redBase.IsDead() && !blueBase.IsDead() && redOutpost.Health != blueOutpost.Health)
         {
@@ -112,8 +105,8 @@ public sealed partial class SettlementSystem : ISystem
         }
 
         // 一局比赛时间耗尽时，若双方基地剩余血量一致，前哨站血量一致或均被击毁， 全队攻击伤害高的一方获胜。
-        var redDamageSum = BattleSystem.GetDamageSum(Camp.Red);
-        var blueDamageSum = BattleSystem.GetDamageSum(Camp.Blue);
+        var redDamageSum = battleSystem.GetDamageSum(Camp.Red);
+        var blueDamageSum = battleSystem.GetDamageSum(Camp.Blue);
 
         if (redDamageSum != blueDamageSum)
         {
@@ -125,10 +118,10 @@ public sealed partial class SettlementSystem : ISystem
         }
 
         // 一局比赛时间耗尽时，若双方基地剩余血量一致， 前哨站血量一致或均被击毁， 全队攻击伤害一致，全队总剩余血量高的一方获胜
-        var redTotalHp = EntitySystem
+        var redTotalHp = entitySystem
             .GetOperatedEntities<IHealthed>(Camp.Red)
             .Sum(e => e.Health);
-        var blueTotalHp = EntitySystem
+        var blueTotalHp = entitySystem
             .GetOperatedEntities<IHealthed>(Camp.Blue)
             .Sum(e => e.Health);
 
@@ -147,7 +140,7 @@ public sealed partial class SettlementSystem : ISystem
     [Route]
     private void OnJudgeTerminate(JudgePenaltyEvent evt)
     {
-        if (TimeSystem.Stage != JudgeSystemStage.Match)
+        if (timeSystem.Stage != JudgeSystemStage.Match)
             return;
         if (_currentRoundSettled)
             return;
@@ -162,7 +155,7 @@ public sealed partial class SettlementSystem : ISystem
     /// </summary>
     public void JudgeTerminate()
     {
-        if (TimeSystem.Stage != JudgeSystemStage.Match)
+        if (timeSystem.Stage != JudgeSystemStage.Match)
             return;
         if (_currentRoundSettled)
             return;
@@ -177,7 +170,7 @@ public sealed partial class SettlementSystem : ISystem
     [Route]
     private void OnKill(KillEvent evt)
     {
-        if (TimeSystem.Stage != JudgeSystemStage.Match)
+        if (timeSystem.Stage != JudgeSystemStage.Match)
             return;
         if (_currentRoundSettled)
             return;

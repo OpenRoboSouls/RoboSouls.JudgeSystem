@@ -51,8 +51,7 @@ public sealed class RM2026ucPerformanceSystem : PerformanceSystemBase
     /// 表 5-12 英雄、步兵、空中机器人的等级和经验
     /// </summary>
     private static readonly ReadOnlyCollection<int> ExperienceTree = Array.AsReadOnly(
-        new[]
-        {
+        [
             550,
             1100,
             1650,
@@ -62,7 +61,7 @@ public sealed class RM2026ucPerformanceSystem : PerformanceSystemBase
             3850,
             4400,
             5000
-        }
+        ]
     );
 
     /// <summary>
@@ -70,7 +69,7 @@ public sealed class RM2026ucPerformanceSystem : PerformanceSystemBase
     /// 英雄机器人 - 近战优先
     /// </summary>
     private static readonly ReadOnlyCollection<int> PowerTreeHeroMeleeFocused =
-        Array.AsReadOnly(new[] { 70, 75, 80, 85, 90, 95, 100, 105, 110, 120 });
+        Array.AsReadOnly([70, 75, 80, 85, 90, 95, 100, 105, 110, 120]);
 
     /// <summary>
     /// 血量值
@@ -94,7 +93,7 @@ public sealed class RM2026ucPerformanceSystem : PerformanceSystemBase
     /// 英雄机器人 - 近战优先
     /// </summary>
     private static readonly ReadOnlyCollection<int> CooldownTreeHeroMeleeFocused =
-        Array.AsReadOnly(new int[] { 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 });
+        Array.AsReadOnly([12, 14, 16, 18, 20, 22, 24, 26, 28, 30]);
 
     /// <summary>
     /// 功率值
@@ -102,7 +101,7 @@ public sealed class RM2026ucPerformanceSystem : PerformanceSystemBase
     /// 英雄机器人 - 远程优先
     /// </summary>
     private static readonly ReadOnlyCollection<int> PowerTreeHeroSniperFocused =
-        Array.AsReadOnly(new[] { 50, 55, 60, 65, 70, 75, 80, 85, 90, 100 });
+        Array.AsReadOnly([50, 55, 60, 65, 70, 75, 80, 85, 90, 100]);
 
     /// <summary>
     /// 血量值
@@ -126,7 +125,7 @@ public sealed class RM2026ucPerformanceSystem : PerformanceSystemBase
     /// 英雄机器人 - 远程优先
     /// </summary>
     private static readonly ReadOnlyCollection<int> CooldownTreeHeroSniperFocused =
-        Array.AsReadOnly(new int[] { 20, 23, 26, 29, 32, 35, 38, 41, 44, 50 });
+        Array.AsReadOnly([20, 23, 26, 29, 32, 35, 38, 41, 44, 50]);
 
     /// <summary>
     /// 功率值
@@ -134,7 +133,7 @@ public sealed class RM2026ucPerformanceSystem : PerformanceSystemBase
     /// 步兵机器人 - 功率优先
     /// </summary>
     private static readonly ReadOnlyCollection<int> PowerTreeInfantryPowerPriority =
-        Array.AsReadOnly(new[] { 60, 65, 70, 75, 80, 85, 90, 95, 100, 100 });
+        Array.AsReadOnly([60, 65, 70, 75, 80, 85, 90, 95, 100, 100]);
 
     /// <summary>
     /// 血量值
@@ -175,7 +174,7 @@ public sealed class RM2026ucPerformanceSystem : PerformanceSystemBase
     /// 冷却速率
     /// </summary>
     private static readonly ReadOnlyCollection<int> CooldownTree17mmBurst = Array.AsReadOnly(
-        new int[] { 5, 7, 9, 11, 12, 13, 14, 16, 18, 20 }
+        [5, 7, 9, 11, 12, 13, 14, 16, 18, 20]
     );
 
     /// <summary>
@@ -193,7 +192,7 @@ public sealed class RM2026ucPerformanceSystem : PerformanceSystemBase
     /// 冷却速率
     /// </summary>
     private static readonly ReadOnlyCollection<int> CooldownTree17mmCooldown = Array.AsReadOnly(
-        new int[] { 12, 14, 16, 18, 20, 22, 24, 26, 28, 90 }
+        [12, 14, 16, 18, 20, 22, 24, 26, 28, 90]
     );
 
     /// <summary>
@@ -211,7 +210,7 @@ public sealed class RM2026ucPerformanceSystem : PerformanceSystemBase
     /// 冷却速率
     /// </summary>
     private static readonly ReadOnlyCollection<int> CooldownTree17mmAerial = Array.AsReadOnly(
-        new int[] { 20, 30, 40, 50, 60, 70, 80, 90, 100, 120 }
+        [20, 30, 40, 50, 60, 70, 80, 90, 100, 120]
     );
 
     public override int GetStageTimeLimit(JudgeSystemStage stage)

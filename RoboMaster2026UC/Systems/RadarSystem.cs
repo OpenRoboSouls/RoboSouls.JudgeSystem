@@ -5,36 +5,24 @@ using System.Threading;
 using System.Threading.Tasks;
 using RoboSouls.JudgeSystem.Entities;
 using RoboSouls.JudgeSystem.Systems;
-using VContainer;
 
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 
 /// <summary>
 /// 雷达机制
 /// </summary>
-public sealed class RadarSystem : ISystem
+public sealed class RadarSystem(
+    ITimeSystem timeSystem,
+    ICacheProvider<float> floatCacheBox,
+    IRadarBrain radarBrain,
+    BuffSystem buffSystem,
+    ICacheProvider<int> intCacheBox,
+    EntitySystem entitySystem)
+    : ISystem
 {
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
-
-    [Inject]
-    internal ICacheProvider<float> FloatCacheBox { get; set; }
-
-    [Inject]
-    internal IRadarBrain RadarBrain { get; set; }
-
-    [Inject]
-    internal BuffSystem BuffSystem { get; set; }
-
-    [Inject]
-    internal ICacheProvider<int> IntCacheBox { get; set; }
-
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
-
     public Task Reset(CancellationToken cancellation = new CancellationToken())
     {
-        TimeSystem.RegisterRepeatAction(0.5f, RadarScanTask);
+        timeSystem.RegisterRepeatAction(0.5f, RadarScanTask);
         _lastMark.Clear();
 
         return Task.CompletedTask;
@@ -42,7 +30,7 @@ public sealed class RadarSystem : ISystem
 
     private Task RadarScanTask()
     {
-        if (TimeSystem.Stage != JudgeSystemStage.Match)
+        if (timeSystem.Stage != JudgeSystemStage.Match)
             return Task.CompletedTask;
 
         return Task.WhenAll(
@@ -63,7 +51,7 @@ public sealed class RadarSystem : ISystem
 
     private Task RadarScanUpdateTaskFor(in Identity id)
     {
-        var mark = RadarBrain.OnRadarScan(id);
+        var mark = radarBrain.OnRadarScan(id);
         var lastMark = _lastMark.GetValueOrDefault(id, Mark.Wrong);
         var x = GetMarkProgressDelta(id);
 
@@ -116,7 +104,7 @@ public sealed class RadarSystem : ISystem
 
     public float GetMarkProgress(in Identity id)
     {
-        return FloatCacheBox.WithReaderNamespace(id).Load(MarkProgressCacheKey);
+        return floatCacheBox.WithReaderNamespace(id).Load(MarkProgressCacheKey);
     }
 
     private void SetMarkProgress(in Identity id, float progress)
@@ -126,11 +114,11 @@ public sealed class RadarSystem : ISystem
         if (progress >= 100f)
         {
             // 易伤效果
-            if (!BuffSystem.TryGetBuff(id, RM2026ucBuffs.Vulnerable, out Buff buff))
+            if (!buffSystem.TryGetBuff(id, RM2026ucBuffs.Vulnerable, out Buff buff))
             {
-                BuffSystem.AddBuff(id, RM2026ucBuffs.Vulnerable, 0.15f, TimeSpan.MaxValue);
+                buffSystem.AddBuff(id, RM2026ucBuffs.Vulnerable, 0.15f, TimeSpan.MaxValue);
             }
-            else if (TimeSystem.Time - buff.Value > 60)
+            else if (timeSystem.Time - buff.Value > 60)
             {
                 // 持续60秒添加双倍易伤机会
                 SetDoubleVulnerableChanceGained(
@@ -141,20 +129,20 @@ public sealed class RadarSystem : ISystem
         }
         else
         {
-            BuffSystem.RemoveBuff(id, RM2026ucBuffs.Vulnerable);
+            buffSystem.RemoveBuff(id, RM2026ucBuffs.Vulnerable);
         }
 
-        FloatCacheBox.WithWriterNamespace(id).Save(MarkProgressCacheKey, progress);
+        floatCacheBox.WithWriterNamespace(id).Save(MarkProgressCacheKey, progress);
     }
 
     private float GetMarkProgressDelta(in Identity id)
     {
-        return FloatCacheBox.WithReaderNamespace(id).Load(MarkProgressDeltaCacheKey);
+        return floatCacheBox.WithReaderNamespace(id).Load(MarkProgressDeltaCacheKey);
     }
 
     private void SetMarkProgressDelta(in Identity id, float delta)
     {
-        FloatCacheBox.WithWriterNamespace(id).Save(MarkProgressDeltaCacheKey, delta);
+        floatCacheBox.WithWriterNamespace(id).Save(MarkProgressDeltaCacheKey, delta);
     }
 
     private static readonly int DoubleVulnerableChanceGainCacheKey =
@@ -164,28 +152,28 @@ public sealed class RadarSystem : ISystem
 
     private int GetDoubleVulnerableChanceGained(Camp camp)
     {
-        return IntCacheBox
+        return intCacheBox
             .WithReaderNamespace(new Identity(camp, 0))
             .Load(DoubleVulnerableChanceGainCacheKey);
     }
 
     private void SetDoubleVulnerableChanceGained(Camp camp, int gain)
     {
-        IntCacheBox
+        intCacheBox
             .WithWriterNamespace(new Identity(camp, 0))
             .Save(DoubleVulnerableChanceGainCacheKey, gain);
     }
 
     private int GetDoubleVulnerableChanceConsumed(Camp camp)
     {
-        return IntCacheBox
+        return intCacheBox
             .WithReaderNamespace(new Identity(camp, 0))
             .Load(DoubleVulnerableChanceConsumedCacheKey);
     }
 
     private void SetDoubleVulnerableChanceConsumed(Camp camp, int consumed)
     {
-        IntCacheBox
+        intCacheBox
             .WithWriterNamespace(new Identity(camp, 0))
             .Save(DoubleVulnerableChanceConsumedCacheKey, consumed);
     }
@@ -219,13 +207,13 @@ public sealed class RadarSystem : ISystem
 
         SetDoubleVulnerableChanceConsumed(camp, GetDoubleVulnerableChanceConsumed(camp) + 1);
 
-        var targets = EntitySystem
+        var targets = entitySystem
             .GetOperatedEntities<IHealthed>(camp.GetOppositeCamp())
-            .Where(h => BuffSystem.TryGetBuff(h.Id, RM2026ucBuffs.Vulnerable, out Buff _));
+            .Where(h => buffSystem.TryGetBuff(h.Id, RM2026ucBuffs.Vulnerable, out Buff _));
 
         foreach (var healthed in targets)
         {
-            BuffSystem.AddBuff(
+            buffSystem.AddBuff(
                 healthed.Id,
                 RM2026ucBuffs.Vulnerable,
                 0.3f,

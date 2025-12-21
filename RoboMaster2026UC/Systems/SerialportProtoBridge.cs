@@ -1,10 +1,7 @@
 ﻿using RoboSouls.JudgeSystem.Systems;
-using VContainer;
 
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 
-public class SerialportProtoBridge
+public class SerialportProtoBridge(IMQService mqService)
 {
-    [Inject]
-    internal IMQService MQService { get; set; }
 }

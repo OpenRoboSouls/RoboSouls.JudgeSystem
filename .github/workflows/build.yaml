@@ -1,0 +1,69 @@
+name: .NET 项目构建与发布
+
+# 触发条件：所有分支推送、所有Tag推送
+on:
+  push:
+    branches: ['**']
+    tags: ['**']
+
+# 最小权限配置（核心：明确权限范围，遵循最小权限原则）
+permissions:
+  contents: write        # 创建/编辑GitHub Release、上传Release资产需要
+  actions: write         # 上传Action Artifact需要
+  pull-requests: read    # 可选（若无需PR相关操作可删除）
+  repository-projects: read # 可选
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # 1. 检出代码（根目录SLN自动匹配）
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 2. 配置.NET SDK（按需替换版本）
+      - name: 设置.NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x' # 替换为你的项目SDK版本（6.0.x/7.0.x/9.0.x）
+
+      # 3. 还原NuGet依赖（自动匹配根目录所有SLN）
+      - name: 还原依赖
+        run: dotnet restore 
+
+      # 4. 构建Release配置（输出到artifacts/Release）
+      - name: 构建Release版本
+        run: |
+          dotnet build  \
+            --configuration Release \
+            --no-restore \
+            --output ./artifacts/Release \
+            --verbosity normal
+
+      # 6. 上传Release制品到Action Artifact（仅Release，无压缩）
+      - name: 上传Release构建制品
+        uses: actions/upload-artifact@v6
+        with:
+          name: Release-Artifacts
+          path: ./artifacts/Release/
+          if-no-files-found: error
+          retention-days: 90
+          overwrite: true
+
+      # 7. 仅Tag推送时创建GitHub Release（仅上传Release制品）
+      - name: 创建GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          # 仅上传Release制品（排除Lib重复文件后）
+          files: ./artifacts/Release/*
+          name: 正式发布 ${{ github.ref_name }}
+          generate_release_notes: true
+          # 可选：预发布标记
+          # prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

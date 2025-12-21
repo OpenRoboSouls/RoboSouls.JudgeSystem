@@ -6,25 +6,18 @@ namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Events;
 /// <summary>
 /// 空中支援开始
 /// </summary>
-public readonly struct AirstrikeStartEvent
-    : IJudgeSystemEvent<AirstrikeStartEvent>,
-        IEquatable<AirstrikeStartEvent>
+public readonly struct AirstrikeStartEvent(Identity aerialId, double time) : IJudgeSystemEvent<AirstrikeStartEvent>,
+    IEquatable<AirstrikeStartEvent>
 {
-    public readonly Identity AerialId;
-    public readonly double Time;
-
-    public AirstrikeStartEvent(Identity aerialId, double time)
-    {
-        AerialId = aerialId;
-        Time = time;
-    }
+    public Identity AerialId => aerialId;
+    public double Time => time;
 
     public bool Equals(AirstrikeStartEvent other)
     {
         return AerialId.Equals(other.AerialId) && Time.Equals(other.Time);
     }
 
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
         return obj is AirstrikeStartEvent other && Equals(other);
     }
@@ -48,25 +41,18 @@ public readonly struct AirstrikeStartEvent
 /// <summary>
 /// 空中支援结束
 /// </summary>
-public readonly struct AirstrikeStopEvent
-    : IJudgeSystemEvent<AirstrikeStopEvent>,
-        IEquatable<AirstrikeStopEvent>
+public readonly struct AirstrikeStopEvent(Identity aerialId, double time) : IJudgeSystemEvent<AirstrikeStopEvent>,
+    IEquatable<AirstrikeStopEvent>
 {
-    public readonly Identity AerialId;
-    public readonly double Time;
-
-    public AirstrikeStopEvent(Identity aerialId, double time)
-    {
-        AerialId = aerialId;
-        Time = time;
-    }
+    public Identity AerialId => aerialId;
+    public double Time => time;
 
     public bool Equals(AirstrikeStopEvent other)
     {
         return AerialId.Equals(other.AerialId) && Time.Equals(other.Time);
     }
 
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
         return obj is AirstrikeStopEvent other && Equals(other);
     }

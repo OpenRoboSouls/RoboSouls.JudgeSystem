@@ -1,6 +1,5 @@
 ﻿using RoboSouls.JudgeSystem.Entities;
 using RoboSouls.JudgeSystem.Systems;
-using VContainer;
 
 namespace RoboSouls.JudgeSystem.RoboMaster2025UC.Entities;
 

@@ -22,7 +22,15 @@ namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 ///  比赛开始 3 分钟后
 /// </summary>
 [Routes]
-public sealed partial class OutpostSystem : ISystem
+public sealed partial class OutpostSystem(
+    ITimeSystem timeSystem,
+    ICacheProvider<bool> boolCacheBox,
+    ICacheProvider<float> floatCacheBox,
+    IMatchConfiguration matchConfiguration,
+    ICommandPublisher commandPublisher,
+    EntitySystem entitySystem,
+    BuffSystem buffSystem)
+    : ISystem
 {
     public const ushort OutpostZoneId = 100;
     public static readonly Identity RedOutpostZoneId = new Identity(Camp.Red, OutpostZoneId);
@@ -35,42 +43,21 @@ public sealed partial class OutpostSystem : ISystem
         MapTo(router);
     }
 
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
-
-    [Inject]
-    internal ICacheProvider<bool> BoolCacheBox { get; set; }
-
-    [Inject]
-    internal ICacheProvider<float> FloatCacheBox { get; set; }
-
-    [Inject]
-    internal IMatchConfiguration MatchConfiguration { get; set; }
-
-    [Inject]
-    internal ICommandPublisher CommandPublisher { get; set; }
-
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
-
-    [Inject]
-    internal BuffSystem BuffSystem { get; set; }
-
     public Task Reset(CancellationToken cancellation = new CancellationToken())
     {
-        TimeSystem.RegisterOnceAction(
+        timeSystem.RegisterOnceAction(
             JudgeSystemStage.Match,
             0,
             () =>
             {
-                var clockwise = MatchConfiguration.Random.Next(2) == 0;
+                var clockwise = matchConfiguration.Random.Next(2) == 0;
 
                 StartOutpost(Camp.Red, clockwise);
                 StartOutpost(Camp.Blue, clockwise);
             }
         );
 
-        TimeSystem.RegisterOnceAction(
+        timeSystem.RegisterOnceAction(
             JudgeSystemStage.Match,
             180,
             () =>
@@ -115,7 +102,7 @@ public sealed partial class OutpostSystem : ISystem
             _ => throw new ArgumentOutOfRangeException(),
         };
 
-        BoolCacheBox.WithWriterNamespace(id).Save(Outpost.RotateClockwiseCacheKey, isClockwise);
+        boolCacheBox.WithWriterNamespace(id).Save(Outpost.RotateClockwiseCacheKey, isClockwise);
     }
 
     private void SetRotateSpeed(Camp camp, float speed)
@@ -132,30 +119,30 @@ public sealed partial class OutpostSystem : ISystem
             _ => throw new ArgumentOutOfRangeException(),
         };
 
-        var outpost = EntitySystem.Entities[id] as Outpost;
+        var outpost = entitySystem.Entities[id] as Outpost;
         if (outpost.RotateSpeed == speed)
         {
             return;
         }
 
-        FloatCacheBox.WithWriterNamespace(id).Save(Outpost.RotateSpeedCacheKey, speed);
+        floatCacheBox.WithWriterNamespace(id).Save(Outpost.RotateSpeedCacheKey, speed);
 
         if (speed > 0)
         {
-            CommandPublisher.PublishAsync(
+            commandPublisher.PublishAsync(
                 new OutpostRotateStartEvent(camp, outpost.IsRotateClockwise, speed)
             );
         }
         else
         {
-            CommandPublisher.PublishAsync(new OutpostRotateStopEvent(camp));
+            commandPublisher.PublishAsync(new OutpostRotateStopEvent(camp));
         }
     }
 
     [Route]
     private void OnEnterOutpostZone(EnterZoneEvent evt)
     {
-        if (TimeSystem.Stage != JudgeSystemStage.Match)
+        if (timeSystem.Stage != JudgeSystemStage.Match)
             return;
         if (evt.ZoneId != RedOutpostZoneId && evt.ZoneId != BlueOutpostZoneId)
             return;
@@ -164,7 +151,7 @@ public sealed partial class OutpostSystem : ISystem
         if (IsOutpostZoneDeactivated(evt.ZoneId.Camp))
             return;
 
-        var cooldownBuffValue = TimeSystem.StageTimeElapsed switch
+        var cooldownBuffValue = timeSystem.StageTimeElapsed switch
         {
             >= 120 and < 180 => 2,
             >= 180 and < 300 => 3,
@@ -173,7 +160,7 @@ public sealed partial class OutpostSystem : ISystem
         };
         if (cooldownBuffValue > 0)
         {
-            BuffSystem.AddBuff(
+            buffSystem.AddBuff(
                 evt.OperatorId,
                 Buffs.CoolDownBuff,
                 cooldownBuffValue,
@@ -181,7 +168,7 @@ public sealed partial class OutpostSystem : ISystem
             );
         }
             
-        BuffSystem.RemoveBuff(evt.OperatorId, RM2026ucBuffs.WeakenedBuff);
+        buffSystem.RemoveBuff(evt.OperatorId, RM2026ucBuffs.WeakenedBuff);
     }
 
     [Route]
@@ -192,16 +179,16 @@ public sealed partial class OutpostSystem : ISystem
         if (evt.OperatorId.Camp != evt.ZoneId.Camp)
             return;
 
-        if (TimeSystem.Stage == JudgeSystemStage.Match)
+        if (timeSystem.Stage == JudgeSystemStage.Match)
         {
-            BuffSystem.RemoveBuff(evt.OperatorId, Buffs.CoolDownBuff);
+            buffSystem.RemoveBuff(evt.OperatorId, Buffs.CoolDownBuff);
         }
     }
 
     public bool IsOutpostZoneDeactivated(Camp camp)
     {
         var id = camp == Camp.Red ? RedOutpostZoneId : BlueOutpostZoneId;
-        return BoolCacheBox
+        return boolCacheBox
             .WithReaderNamespace(id) 
             .TryLoad(OutpostZoneDeactivatedCacheKey, out var deactivated) && deactivated;
     }
@@ -209,6 +196,6 @@ public sealed partial class OutpostSystem : ISystem
     internal void SetOutpostZoneDeactivated(Camp camp, bool deactivated)
     {
         var id = camp == Camp.Red ? RedOutpostZoneId : BlueOutpostZoneId;
-        BoolCacheBox.WithWriterNamespace(id).Save(OutpostZoneDeactivatedCacheKey, deactivated);
+        boolCacheBox.WithWriterNamespace(id).Save(OutpostZoneDeactivatedCacheKey, deactivated);
     }
 }

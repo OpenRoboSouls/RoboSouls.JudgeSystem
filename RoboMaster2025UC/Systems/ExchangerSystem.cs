@@ -525,7 +525,7 @@ public sealed partial class ExchangerSystem : ISystem
             return;
         if (
             !evt.ZoneId.IsRobotCamp()
-            || evt.ZoneId.ID != RedExchangeZoneId.ID
+            || evt.ZoneId.Id != RedExchangeZoneId.Id
             || !evt.OperatorId.IsEngineer()
         )
             return;
@@ -544,7 +544,7 @@ public sealed partial class ExchangerSystem : ISystem
             return;
         if (
             !evt.ZoneId.IsRobotCamp()
-            || evt.ZoneId.ID != RedExchangeZoneId.ID
+            || evt.ZoneId.Id != RedExchangeZoneId.Id
             || !evt.OperatorId.IsEngineer()
         )
             return;

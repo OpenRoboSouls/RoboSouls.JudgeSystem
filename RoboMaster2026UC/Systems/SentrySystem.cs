@@ -13,7 +13,13 @@ namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 /// 哨兵机器人机制
 /// </summary>
 [Routes]
-public sealed partial class SentrySystem : ISystem
+public sealed partial class SentrySystem(
+    ITimeSystem timeSystem,
+    BattleSystem battleSystem,
+    EntitySystem entitySystem,
+    ICacheProvider<int> intCacheBox,
+    LifeSystem lifeSystem)
+    : ISystem
 {
     [Inject]
     internal void Inject(Router router)
@@ -23,24 +29,9 @@ public sealed partial class SentrySystem : ISystem
 
     private static readonly int FreeAmmoAmountCacheKey = "free_ammo_amount".Sum();
 
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
-
-    [Inject]
-    internal BattleSystem BattleSystem { get; set; }
-
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
-
-    [Inject]
-    internal ICacheProvider<int> IntCacheBox { get; set; }
-
-    [Inject]
-    internal LifeSystem LifeSystem { get; set; }
-
     public Task Reset(CancellationToken cancellation = new CancellationToken())
     {
-        TimeSystem.RegisterOnceAction(
+        timeSystem.RegisterOnceAction(
             JudgeSystemStage.Match,
             0,
             () =>
@@ -56,12 +47,12 @@ public sealed partial class SentrySystem : ISystem
             SetFreeAmmoAmount(Camp.Blue, GetFreeAmmoAmount(Camp.Blue) + 100);
         });
 
-        TimeSystem.RegisterOnceAction(JudgeSystemStage.Match, 60, bothAddFreeAmmo);
-        TimeSystem.RegisterOnceAction(JudgeSystemStage.Match, 120, bothAddFreeAmmo);
-        TimeSystem.RegisterOnceAction(JudgeSystemStage.Match, 180, bothAddFreeAmmo);
-        TimeSystem.RegisterOnceAction(JudgeSystemStage.Match, 240, bothAddFreeAmmo);
-        TimeSystem.RegisterOnceAction(JudgeSystemStage.Match, 300, bothAddFreeAmmo);
-        TimeSystem.RegisterOnceAction(JudgeSystemStage.Match, 360, bothAddFreeAmmo);
+        timeSystem.RegisterOnceAction(JudgeSystemStage.Match, 60, bothAddFreeAmmo);
+        timeSystem.RegisterOnceAction(JudgeSystemStage.Match, 120, bothAddFreeAmmo);
+        timeSystem.RegisterOnceAction(JudgeSystemStage.Match, 180, bothAddFreeAmmo);
+        timeSystem.RegisterOnceAction(JudgeSystemStage.Match, 240, bothAddFreeAmmo);
+        timeSystem.RegisterOnceAction(JudgeSystemStage.Match, 300, bothAddFreeAmmo);
+        timeSystem.RegisterOnceAction(JudgeSystemStage.Match, 360, bothAddFreeAmmo);
 
         return Task.CompletedTask;
     }
@@ -75,10 +66,10 @@ public sealed partial class SentrySystem : ISystem
             _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null),
         };
 
-        if (!EntitySystem.TryGetOperatedEntity(id, out Sentry s))
+        if (!entitySystem.TryGetOperatedEntity(id, out Sentry s))
             return;
 
-        BattleSystem.SetAmmoAllowance(s, s.AmmoAllowance + amount);
+        battleSystem.SetAmmoAllowance(s, s.AmmoAllowance + amount);
     }
 
     /// <summary>
@@ -95,10 +86,10 @@ public sealed partial class SentrySystem : ISystem
             _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null),
         };
 
-        if (!EntitySystem.TryGetOperatedEntity(id, out Sentry s))
+        if (!entitySystem.TryGetOperatedEntity(id, out Sentry s))
             return 0;
 
-        return IntCacheBox.WithReaderNamespace(id).Load(FreeAmmoAmountCacheKey);
+        return intCacheBox.WithReaderNamespace(id).Load(FreeAmmoAmountCacheKey);
     }
 
     private void SetFreeAmmoAmount(Camp camp, int amount)
@@ -110,16 +101,16 @@ public sealed partial class SentrySystem : ISystem
             _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null),
         };
 
-        if (!EntitySystem.TryGetOperatedEntity(id, out Sentry s))
+        if (!entitySystem.TryGetOperatedEntity(id, out Sentry s))
             return;
 
-        IntCacheBox.WithWriterNamespace(id).Save(FreeAmmoAmountCacheKey, amount);
+        intCacheBox.WithWriterNamespace(id).Save(FreeAmmoAmountCacheKey, amount);
     }
 
     [Route]
     private void OnEnterSupplyZone(EnterZoneEvent evt)
     {
-        if (TimeSystem.Stage != JudgeSystemStage.Match)
+        if (timeSystem.Stage != JudgeSystemStage.Match)
             return;
         if (!evt.OperatorId.IsSentry())
             return;
@@ -132,25 +123,25 @@ public sealed partial class SentrySystem : ISystem
             return;
         if (evt.OperatorId.Camp != evt.ZoneId.Camp)
             return;
-        if (!EntitySystem.TryGetOperatedEntity(evt.OperatorId, out Sentry s))
+        if (!entitySystem.TryGetOperatedEntity(evt.OperatorId, out Sentry s))
             return;
 
         var amount = GetFreeAmmoAmount(evt.OperatorId.Camp);
         if (amount <= 0)
             return;
 
-        BattleSystem.SetAmmoAllowance(s, s.AmmoAllowance + amount);
+        battleSystem.SetAmmoAllowance(s, s.AmmoAllowance + amount);
         SetFreeAmmoAmount(evt.OperatorId.Camp, 0);
-        LifeSystem.SetInvincible(evt.OperatorId, false);
+        lifeSystem.SetInvincible(evt.OperatorId, false);
     }
 
     [Route]
     private void OnRevive(ReviveEvent evt)
     {
-        if (TimeSystem.Stage != JudgeSystemStage.Match)
+        if (timeSystem.Stage != JudgeSystemStage.Match)
             return;
         if (!evt.Reviver.IsSentry())
             return;
-        LifeSystem.SetInvincible(evt.Reviver, true, 60);
+        lifeSystem.SetInvincible(evt.Reviver, true, 60);
     }
 }

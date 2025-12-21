@@ -274,7 +274,7 @@ public sealed partial class FortressSystem : ISystem
 
             if (GetCurrentFortressUserID(evt.OperatorId.Camp) == 0)
             {
-                SetCurrentFortressUser(evt.OperatorId.Camp, evt.OperatorId.ID);
+                SetCurrentFortressUser(evt.OperatorId.Camp, evt.OperatorId.Id);
             }
         }
         else
@@ -312,7 +312,7 @@ public sealed partial class FortressSystem : ISystem
 
         if (evt.OperatorId.Camp == evt.ZoneId.Camp)
         {
-            if (evt.OperatorId.ID == GetCurrentFortressUserID(evt.OperatorId.Camp))
+            if (evt.OperatorId.Id == GetCurrentFortressUserID(evt.OperatorId.Camp))
             {
                 SetCurrentFortressUser(evt.OperatorId.Camp, 0);
                 SetLastLeaveOppositeFortressTime(evt.OperatorId.Camp, TimeSystem.Time);
@@ -326,7 +326,7 @@ public sealed partial class FortressSystem : ISystem
             if (TimeSystem.StageTimeElapsed < 180 || !outpost.IsDead())
                 return;
 
-            if (GetLastEnterOppositeFortressUser(evt.OperatorId.Camp).ID == evt.OperatorId.ID)
+            if (GetLastEnterOppositeFortressUser(evt.OperatorId.Camp).Id == evt.OperatorId.Id)
             {
                 SetLastEnterOppositeFortressUser(Identity.Spectator);
             }
@@ -356,7 +356,7 @@ public sealed partial class FortressSystem : ISystem
     private void FortressOccupierUpdateLoopFor(Camp camp)
     {
         var id = new Identity(camp, GetCurrentFortressUserID(camp));
-        if (id.ID == 0)
+        if (id.Id == 0)
             return;
 
         BuffSystem.AddBuff(
@@ -394,7 +394,7 @@ public sealed partial class FortressSystem : ISystem
     {
         if (TimeSystem.Stage is not JudgeSystemStage.Match)
             return;
-        if (command.Shooter.Id.ID != GetCurrentFortressUserID(command.Shooter.Id.Camp))
+        if (command.Shooter.Id.Id != GetCurrentFortressUserID(command.Shooter.Id.Camp))
             return;
         var fortressAmmo = GetAmmoAllowance(command.Shooter.Id.Camp);
         if (fortressAmmo <= 0)

@@ -1,5 +1,4 @@
 using System;
-using VContainer;
 
 namespace RoboSouls.JudgeSystem.Systems;
 
@@ -16,15 +15,9 @@ public interface IBuffSystem
     bool TryGetBuff(in Identity buffable, int buffType, out Buff buff);
 }
 
-public sealed class BuffSystem : IBuffSystem, ISystem
+public sealed class BuffSystem(ICacheProvider<Buff> buffCacheBox, ITimeSystem timeSystem) : IBuffSystem, ISystem
 {
     public static readonly int BuffCacheKey = "buff".Sum();
-
-    [Inject]
-    internal ICacheProvider<Buff> BuffCacheBox { get; set; }
-
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
 
     public void AddBuff(
         Identity buffable,
@@ -43,19 +36,19 @@ public sealed class BuffSystem : IBuffSystem, ISystem
                     return;
                 }
 
-                duration += TimeSpan.FromSeconds(oldBuff.EndTime - TimeSystem.Time);
+                duration += TimeSpan.FromSeconds(oldBuff.EndTime - timeSystem.Time);
             }
         }
 
-        BuffCacheBox
+        buffCacheBox
             .WithWriterNamespace(buffable)
             .WithWriterNamespace(BuffCacheKey)
-            .Save(buffType, new Buff(buffType, buffValue, TimeSystem.Time, duration));
+            .Save(buffType, new Buff(buffType, buffValue, timeSystem.Time, duration));
     }
 
     public void RemoveBuff(in Identity buffable, int buffType)
     {
-        BuffCacheBox
+        buffCacheBox
             .WithWriterNamespace(buffable)
             .WithWriterNamespace(BuffCacheKey)
             .Delete(buffType);
@@ -64,13 +57,13 @@ public sealed class BuffSystem : IBuffSystem, ISystem
     public bool TryGetBuff(in Identity buffable, int buffType, out Buff buffValue)
     {
         if (
-            BuffCacheBox
+            buffCacheBox
             .WithReaderNamespace(buffable)
             .WithReaderNamespace(BuffCacheKey)
             .TryLoad(buffType, out var buff)
         )
         {
-            if (buff.EndTime >= TimeSystem.Time)
+            if (buff.EndTime >= timeSystem.Time)
             {
                 buffValue = buff;
                 return true;

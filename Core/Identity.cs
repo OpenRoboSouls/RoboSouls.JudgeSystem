@@ -5,12 +5,20 @@ using System.Text;
 
 namespace RoboSouls.JudgeSystem;
 
-public readonly struct Identity(Camp camp, ushort id) : IEquatable<Identity>
+public readonly record struct Identity
 {
-    private readonly byte _data = (byte)(((byte)camp << 6) | (id & 0x3F));
-
+    private readonly byte _data;
     public Camp Camp => (Camp)(_data >> 6);
-    public ushort ID => (ushort)(_data & 0x3F);
+    public ushort Id => (ushort)(_data & 0x3F);
+    
+    private Identity(byte data)
+    {
+        _data = data;
+    }
+    
+    public Identity(Camp camp, ushort id) : this((byte)(((byte)camp << 6) | (id & 0x3F)))
+    {
+    }
 
     public const ushort HeroId = 1;
     public const ushort EngineerId = 2;
@@ -54,33 +62,6 @@ public readonly struct Identity(Camp camp, ushort id) : IEquatable<Identity>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool TryParse(string str, out Identity identity) =>
         IdentityExtensions.TryParse(str, out identity);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool operator ==(Identity left, Identity right)
-    {
-        return left._data == right._data;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool operator !=(Identity left, Identity right)
-    {
-        return left._data != right._data;
-    }
-
-    public bool Equals(Identity other)
-    {
-        return _data == other._data;
-    }
-
-    public override bool Equals(object obj)
-    {
-        return obj is Identity other && Equals(other);
-    }
-
-    public override int GetHashCode()
-    {
-        return _data.GetHashCode();
-    }
 }
 
 public static class IdentityExtensions
@@ -103,7 +84,7 @@ public static class IdentityExtensions
     {
         if (!ToStringCache.TryGetValue(identity, out var result))
         {
-            result = SToString(identity.Camp, identity.ID);
+            result = SToString(identity.Camp, identity.Id);
             ToStringCache.Add(identity, result);
         }
 
@@ -139,7 +120,7 @@ public static class IdentityExtensions
     {
         if (!ShortDescribeCache.TryGetValue(identity, out var result))
         {
-            result = SShortDescribe(identity.Camp, identity.ID);
+            result = SShortDescribe(identity.Camp, identity.Id);
             ShortDescribeCache.Add(identity, result);
         }
 
@@ -205,7 +186,7 @@ public static class IdentityExtensions
 
         if (!DescribeCache.TryGetValue(identity, out var result))
         {
-            result = SDescribe(identity.Camp, identity.ID);
+            result = SDescribe(identity.Camp, identity.Id);
             DescribeCache.Add(identity, result);
         }
 
@@ -249,48 +230,48 @@ public static class IdentityExtensions
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsHero(in this Identity identity)
     {
-        return identity.IsRobotCamp() && identity.ID == 1;
+        return identity.IsRobotCamp() && identity.Id == 1;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsEngineer(in this Identity identity)
     {
-        return identity.IsRobotCamp() && identity.ID == 2;
+        return identity.IsRobotCamp() && identity.Id == 2;
     }
 
     public static bool IsInfantry(in this Identity identity)
     {
-        return identity.IsRobotCamp() && identity.ID is >= 3 and <= 5;
+        return identity.IsRobotCamp() && identity.Id is >= 3 and <= 5;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsAerial(in this Identity identity)
     {
-        return identity.IsRobotCamp() && identity.ID == 6;
+        return identity.IsRobotCamp() && identity.Id == 6;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsSentry(in this Identity identity)
     {
-        return identity.IsRobotCamp() && identity.ID == 7;
+        return identity.IsRobotCamp() && identity.Id == 7;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsManipulator(in this Identity identity)
     {
-        return identity.IsRobotCamp() && identity.ID == 8;
+        return identity.IsRobotCamp() && identity.Id == 8;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsBase(in this Identity identity)
     {
-        return identity.IsRobotCamp() && identity.ID == 9;
+        return identity.IsRobotCamp() && identity.Id == 9;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsOutpost(in this Identity identity)
     {
-        return identity.IsRobotCamp() && identity.ID == 8;
+        return identity.IsRobotCamp() && identity.Id == 8;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -326,7 +307,7 @@ public struct SerializableIdentity : IEquatable<SerializableIdentity>
 
     public static implicit operator SerializableIdentity(Identity value)
     {
-        return new SerializableIdentity { camp = value.Camp, id = value.ID };
+        return new SerializableIdentity { camp = value.Camp, id = value.Id };
     }
 
     public bool Equals(SerializableIdentity other)

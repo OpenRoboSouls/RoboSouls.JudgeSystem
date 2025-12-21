@@ -5,7 +5,6 @@ using System.Threading;
 using Google.Protobuf;
 using RoboSouls.JudgeSystem.RoboMaster2026UC.Proto;
 using RoboSouls.JudgeSystem.Systems;
-using VContainer;
 using Buff = RoboSouls.JudgeSystem.Systems.Buff;
 
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
@@ -13,10 +12,8 @@ namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 /// <summary>
 /// RoboMaster 2026 客户端协议发布服务
 /// </summary>
-public class ClientProtoBridge
+public sealed class ClientProtoBridge(IMQService mqService)
 {
-    [Inject]
-    internal IMQService MQService { get; set; }
     private readonly Dictionary<string, Action<byte[]>> _handlers = new Dictionary<string, Action<byte[]>>();
 
     private void RegisterHandler<T>(string topic, Action<T> handler, MessageParser<T> parser) where T: IMessage<T>
@@ -27,10 +24,10 @@ public class ClientProtoBridge
             handler(message);
         };
             
-        MQService.Subscribe(topic);
+        mqService.Subscribe(topic);
     }
 
-    private CancellationTokenSource _routineCts;
+    private CancellationTokenSource? _routineCts;
     private void RegisterRoutineAction(int intervalHz, Action action)
     {
         // Task.Void(async () =>
@@ -47,7 +44,7 @@ public class ClientProtoBridge
     public void StartDaemon()
     {
         _routineCts = new CancellationTokenSource();
-        MQService.OnMessageReceived += OnMessageReceived;
+        mqService.OnMessageReceived += OnMessageReceived;
         RegisterHandler("RemoteControl", OnRemoteControl, RemoteControl.Parser);
         RegisterHandler("MapClickInfoNotify", OnMapClickInfoNotify, MapClickInfoNotify.Parser);
         RegisterHandler("AssemblyCommand", OnAssemblyCommand, AssemblyCommand.Parser);
@@ -82,7 +79,7 @@ public class ClientProtoBridge
     public void StopDaemon()
     {
         _handlers.Clear();
-        MQService.OnMessageReceived -= OnMessageReceived;
+        mqService.OnMessageReceived -= OnMessageReceived;
         _routineCts?.Cancel();
         _routineCts?.Dispose();
         _routineCts = null;
@@ -104,8 +101,7 @@ public class ClientProtoBridge
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void PublishMessage(string topic, IMessage message, int qosLevel = 1, CancellationToken cancellationToken = default)
     {
-        var payload = message.ToByteArray();
-        MQService.Publish(topic, payload, qosLevel, cancellationToken);
+        mqService.Publish(topic, message.ToByteArray(), qosLevel, cancellationToken);
     }
 
     private void OnRemoteControl(RemoteControl message)

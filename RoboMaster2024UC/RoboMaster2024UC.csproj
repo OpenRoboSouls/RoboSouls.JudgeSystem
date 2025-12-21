@@ -6,6 +6,7 @@
         <Nullable>enable</Nullable>
         <AssemblyName>RoboSouls.JudgeSystem.RoboMaster2024UC</AssemblyName>
         <RootNamespace>RoboSouls.JudgeSystem.RoboMaster2024UC</RootNamespace>
+        <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     </PropertyGroup>
 
 </Project>

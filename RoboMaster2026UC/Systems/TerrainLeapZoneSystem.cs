@@ -1,7 +1,6 @@
 ﻿using System;
 using RoboSouls.JudgeSystem.Events;
 using RoboSouls.JudgeSystem.Systems;
-using VContainer;
 using VitalRouter;
 
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
@@ -9,7 +8,11 @@ namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 /// <summary>
 /// 地形跨越点机制
 /// </summary>
-public abstract class TerrainLeapZoneSystem : ISystem
+public abstract class TerrainLeapZoneSystem(
+    ITimeSystem timeSystem,
+    ICacheProvider<double> doubleCacheBox,
+    BuffSystem buffSystem)
+    : ISystem
 {
     private static readonly int ActivationTimeKey = "activation_time".Sum();
 
@@ -33,23 +36,14 @@ public abstract class TerrainLeapZoneSystem : ISystem
     /// </summary>
     public abstract int BuffDuration { get; }
 
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
-
-    [Inject]
-    internal ICacheProvider<double> DoubleCacheBox { get; set; }
-
-    [Inject]
-    internal BuffSystem BuffSystem { get; set; }
-
     protected abstract void OnActivationStart(in Identity operatorId);
 
     protected virtual void OnActivationSuccess(in Identity operatorId, double activationTime)
     {
         // 在机器人已有任意地形跨越增益时，再一次获得地形跨越增益，机器人将获得 50%的防御增益
-        if (BuffSystem.TryGetBuff(operatorId, RM2026ucBuffs.TerrainLeapBuff, out Buff _))
+        if (buffSystem.TryGetBuff(operatorId, RM2026ucBuffs.TerrainLeapBuff, out Buff _))
         {
-            BuffSystem.AddBuff(
+            buffSystem.AddBuff(
                 operatorId,
                 Buffs.DefenceBuff,
                 0.5f,
@@ -57,7 +51,7 @@ public abstract class TerrainLeapZoneSystem : ISystem
             );
         }
 
-        BuffSystem.AddBuff(
+        buffSystem.AddBuff(
             operatorId,
             RM2026ucBuffs.TerrainLeapBuff,
             1,
@@ -70,13 +64,13 @@ public abstract class TerrainLeapZoneSystem : ISystem
     {
         if (evt.ZoneId == TriggerZoneId)
         {
-            SetActivationTime(evt.OperatorId, TimeSystem.StageTimeElapsed);
+            SetActivationTime(evt.OperatorId, timeSystem.StageTimeElapsed);
             OnActivationStart(evt.OperatorId);
         }
         else if (evt.ZoneId == ActivationZoneId)
         {
             var activationTime =
-                TimeSystem.StageTimeElapsed - GetActivationTime(evt.OperatorId);
+                timeSystem.StageTimeElapsed - GetActivationTime(evt.OperatorId);
             if (activationTime <= MaxActivationTime)
             {
                 OnActivationSuccess(evt.OperatorId, activationTime);
@@ -86,7 +80,7 @@ public abstract class TerrainLeapZoneSystem : ISystem
 
     private void SetActivationTime(in Identity operatorId, double time)
     {
-        DoubleCacheBox
+        doubleCacheBox
             .WithWriterNamespace(operatorId)
             .WithWriterNamespace(TriggerZoneId)
             .Save(ActivationTimeKey, time);
@@ -94,7 +88,7 @@ public abstract class TerrainLeapZoneSystem : ISystem
 
     private double GetActivationTime(in Identity operatorId)
     {
-        return DoubleCacheBox
+        return doubleCacheBox
             .WithReaderNamespace(operatorId)
             .WithReaderNamespace(TriggerZoneId)
             .Load(ActivationTimeKey);
