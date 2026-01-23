@@ -50,55 +50,28 @@ public sealed partial class BaseSystem(
         var redBase = entitySystem.Entities[Identity.RedBase] as Base;
         var blueBase = entitySystem.Entities[Identity.BlueBase] as Base;
 
-        lifeSystem.SetInvincible(redBase, true);
-        lifeSystem.SetInvincible(blueBase, true);
+        lifeSystem.SetInvincible(redBase!, true);
+        lifeSystem.SetInvincible(blueBase!, true);
 
-        SetArmorOpen(redBase, false);
-        SetArmorOpen(blueBase, false);
+        SetArmorOpen(redBase!, false);
+        SetArmorOpen(blueBase!, false);
 
         SetBaseZoneDeactivated(Camp.Red, false);
         SetBaseZoneDeactivated(Camp.Blue, false);
 
-        timeSystem.RegisterOnceAction(
-            JudgeSystemStage.Countdown,
-            1,
-            FalseStartDetectLoop(Camp.Red)
-        );
-        timeSystem.RegisterOnceAction(
-            JudgeSystemStage.Countdown,
-            1,
-            FalseStartDetectLoop(Camp.Blue)
-        );
-        timeSystem.RegisterOnceAction(
-            JudgeSystemStage.Countdown,
-            2,
-            FalseStartDetectLoop(Camp.Red)
-        );
-        timeSystem.RegisterOnceAction(
-            JudgeSystemStage.Countdown,
-            2,
-            FalseStartDetectLoop(Camp.Blue)
-        );
-        timeSystem.RegisterOnceAction(
-            JudgeSystemStage.Countdown,
-            3,
-            FalseStartDetectLoop(Camp.Red)
-        );
-        timeSystem.RegisterOnceAction(
-            JudgeSystemStage.Countdown,
-            3,
-            FalseStartDetectLoop(Camp.Blue)
-        );
-        timeSystem.RegisterOnceAction(
-            JudgeSystemStage.Countdown,
-            4,
-            FalseStartDetectLoop(Camp.Red)
-        );
-        timeSystem.RegisterOnceAction(
-            JudgeSystemStage.Countdown,
-            4,
-            FalseStartDetectLoop(Camp.Blue)
-        );
+        for (var i = 1; i <= 4; i++)
+        {
+            timeSystem.RegisterOnceAction(
+                JudgeSystemStage.Countdown,
+                i,
+                FalseStartDetectLoop(Camp.Red)
+            );
+            timeSystem.RegisterOnceAction(
+                JudgeSystemStage.Countdown,
+                i,
+                FalseStartDetectLoop(Camp.Blue)
+            );
+        }
 
         return Task.CompletedTask;
     }
@@ -146,11 +119,11 @@ public sealed partial class BaseSystem(
         Base b;
         if (evt.Victim.Camp == Camp.Red)
         {
-            b = entitySystem.Entities[Identity.RedBase] as Base;
+            b = entitySystem.Entities[Identity.RedBase] as Base ?? throw new InvalidOperationException();
         }
         else
         {
-            b = entitySystem.Entities[Identity.BlueBase] as Base;
+            b = entitySystem.Entities[Identity.BlueBase] as Base ?? throw new InvalidOperationException();
         }
 
         lifeSystem.SetInvincible(b, false);
@@ -266,5 +239,11 @@ public sealed partial class BaseSystem(
     {
         var id = camp == Camp.Red ? RedBaseZoneId : BlueBaseZoneId;
         boolCacheBox.WithWriterNamespace(id).Save(BaseZoneDeactivatedCacheKey, deactivated);
+    }
+
+    public void AddHealth(Camp camp, uint amount)
+    {
+        var b = entitySystem.Entities[camp == Camp.Red ? Identity.RedBase : Identity.BlueBase] as Base;
+        lifeSystem.IncreaseHealth(b, amount);
     }
 }

@@ -119,25 +119,25 @@ public sealed partial class WinPointSystem : OccupyZoneSystemBase
         if (redPoint - bluePoint >= 70 && !_bluePointDelta70Dispatched)
         {
             _bluePointDelta70Dispatched = true;
-            EconomySystem.BlueCoin += 200;
+            EconomySystem.AddCoin(Camp.Blue, 200);
         }
 
         if (redPoint - bluePoint >= 140 && !_bluePointDelta140Dispatched)
         {
             _bluePointDelta140Dispatched = true;
-            EconomySystem.BlueCoin += 200;
+            EconomySystem.AddCoin(Camp.Blue, 200);
         }
 
         if (bluePoint - redPoint >= 70 && !_redPointDelta70Dispatched)
         {
             _redPointDelta70Dispatched = true;
-            EconomySystem.RedCoin += 200;
+            EconomySystem.AddCoin(Camp.Red, 200);
         }
 
         if (bluePoint - redPoint >= 140 && !_redPointDelta140Dispatched)
         {
             _redPointDelta140Dispatched = true;
-            EconomySystem.RedCoin += 200;
+            EconomySystem.AddCoin(Camp.Red, 200);
         }
     }
 }

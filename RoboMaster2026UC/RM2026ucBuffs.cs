@@ -22,4 +22,19 @@ public static class RM2026ucBuffs
     /// 易伤
     /// </summary>
     public static readonly int Vulnerable = "vulnerable".Sum();
+    
+    /// <summary>
+    /// 永久防御增益
+    /// </summary>
+    public static readonly int PermanentDefense = "permanent_defense".Sum();
+
+    /// <summary>
+    /// 空中机器人被雷达锁定
+    /// </summary>
+    public static readonly int RadarLock = "radar_lock".Sum();
+
+    /// <summary>
+    /// 空中机器人被雷达压制
+    /// </summary>
+    public static readonly int RadarCountered = "radar_countered".Sum();
 }

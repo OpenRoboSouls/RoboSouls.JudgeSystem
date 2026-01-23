@@ -281,27 +281,9 @@ public sealed class AerialSystem : ISystem
         }
         else
         {
-            if (aerial.Id.Camp == Camp.Red)
+            if (!EconomySystem.TryDecreaseCoin(aerial.Id.Camp, 1))
             {
-                if (EconomySystem.RedCoin > 1)
-                {
-                    EconomySystem.RedCoin -= 1;
-                }
-                else
-                {
-                    StopAirStrike(aerial.Id.Camp);
-                }
-            }
-            else if (aerial.Id.Camp == Camp.Blue)
-            {
-                if (EconomySystem.BlueCoin > 1)
-                {
-                    EconomySystem.BlueCoin -= 1;
-                }
-                else
-                {
-                    StopAirStrike(aerial.Id.Camp);
-                }
+                StopAirStrike(aerial.Id.Camp);
             }
         }
 

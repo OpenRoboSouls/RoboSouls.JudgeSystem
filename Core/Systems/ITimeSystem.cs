@@ -45,53 +45,52 @@ public static class TimeSystemExtension
         return $"{minutes:00}:{seconds:00}";
     }
 
-    public static void RegisterRepeatAction(
-        this ITimeSystem timeSystem,
-        double interval,
-        Action action
-    )
+    extension(ITimeSystem timeSystem)
     {
-        timeSystem.RegisterRepeatAction(
-            interval,
-            () =>
-            {
-                action();
-                return Task.CompletedTask;
-            }
-        );
-    }
+        public void RegisterRepeatAction(double interval,
+            Action action
+        )
+        {
+            timeSystem.RegisterRepeatAction(
+                interval,
+                () =>
+                {
+                    action();
+                    return Task.CompletedTask;
+                }
+            );
+        }
 
-    public static void RegisterOnceAction(
-        this ITimeSystem timeSystem,
-        double delay,
-        Action action
-    )
-    {
-        timeSystem.RegisterOnceAction(
-            delay,
-            () =>
-            {
-                action();
-                return Task.CompletedTask;
-            }
-        );
-    }
+        public void RegisterOnceAction(double delay,
+            Action action
+        )
+        {
+            timeSystem.RegisterOnceAction(
+                delay,
+                () =>
+                {
+                    action();
+                    return Task.CompletedTask;
+                }
+            );
+        }
 
-    public static void RegisterOnceAction(
-        this ITimeSystem timeSystem,
-        JudgeSystemStage stage,
-        double stageTime,
-        Action action
-    )
-    {
-        timeSystem.RegisterOnceAction(
-            stage,
-            stageTime,
-            () =>
-            {
-                action();
-                return Task.CompletedTask;
-            }
-        );
+        public void RegisterOnceAction(JudgeSystemStage stage,
+            double stageTime,
+            Action action
+        )
+        {
+            timeSystem.RegisterOnceAction(
+                stage,
+                stageTime,
+                () =>
+                {
+                    action();
+                    return Task.CompletedTask;
+                }
+            );
+        }
+
+        public float TimeAsFloat => (float) timeSystem.Time;
     }
 }

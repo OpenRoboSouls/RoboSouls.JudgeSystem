@@ -38,8 +38,8 @@ public sealed class EconomyDispatchSystem : ISystem
     private Task BothSideAddMoney(int money)
     {
         Logger.Info($"[EconomyNatural] Both side add money: {money}");
-        EconomySystem.RedCoin += money;
-        EconomySystem.BlueCoin += money;
+        EconomySystem.AddCoin(Camp.Red, money);
+        EconomySystem.AddCoin(Camp.Blue, money);
 
         return Task.CompletedTask;
     }

@@ -124,13 +124,9 @@ public sealed class SupplySystem : ISystem
         if (!CheckCanBuy(shooter.Id.Camp, shooter.AmmoType, amount, out var cost))
             return;
 
-        if (shooter.Id.Camp == Camp.Red)
+        if (!EconomySystem.TryDecreaseCoin(shooter.Id.Camp, cost))
         {
-            EconomySystem.RedCoin -= cost;
-        }
-        else if (shooter.Id.Camp == Camp.Blue)
-        {
-            EconomySystem.BlueCoin -= cost;
+            return;
         }
 
         BattleSystem.SetAmmoAllowance(shooter, shooter.AmmoAllowance + amount);
@@ -141,17 +137,9 @@ public sealed class SupplySystem : ISystem
         if (!EntitySystem.TryGetEntity(id, out IHealthed healthed))
             return false;
         var cost = CalcRemoteSupplyBloodPrice();
-        if (id.Camp == Camp.Red)
+        if (!EconomySystem.TryDecreaseCoin(id.Camp, cost))
         {
-            if (EconomySystem.RedCoin < cost)
-                return false;
-            EconomySystem.RedCoin -= cost;
-        }
-        else if (id.Camp == Camp.Blue)
-        {
-            if (EconomySystem.BlueCoin < cost)
-                return false;
-            EconomySystem.BlueCoin -= cost;
+            return false;
         }
 
         TimeSystem.RegisterOnceAction(
@@ -175,17 +163,9 @@ public sealed class SupplySystem : ISystem
         if (shooter.AmmoType != PerformanceSystemBase.AmmoType17mm)
             return false;
         const int cost = 150;
-        if (id.Camp == Camp.Red)
+        if (!EconomySystem.TryDecreaseCoin(id.Camp, cost))
         {
-            if (EconomySystem.RedCoin < cost)
-                return false;
-            EconomySystem.RedCoin -= cost;
-        }
-        else if (id.Camp == Camp.Blue)
-        {
-            if (EconomySystem.BlueCoin < cost)
-                return false;
-            EconomySystem.BlueCoin -= cost;
+            return false;
         }
 
         TimeSystem.RegisterOnceAction(
@@ -206,17 +186,9 @@ public sealed class SupplySystem : ISystem
         if (shooter.AmmoType != PerformanceSystemBase.AmmoType42mm)
             return false;
         const int cost = 200;
-        if (id.Camp == Camp.Red)
+        if (!EconomySystem.TryDecreaseCoin(id.Camp, cost))
         {
-            if (EconomySystem.RedCoin < cost)
-                return false;
-            EconomySystem.RedCoin -= cost;
-        }
-        else if (id.Camp == Camp.Blue)
-        {
-            if (EconomySystem.BlueCoin < cost)
-                return false;
-            EconomySystem.BlueCoin -= cost;
+            return false;
         }
 
         TimeSystem.RegisterOnceAction(

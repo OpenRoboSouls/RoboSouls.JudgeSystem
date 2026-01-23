@@ -98,13 +98,9 @@ public sealed class SupplySystem(
         if (!CheckCanBuy(shooter.Id.Camp, shooter.AmmoType, amount, out var cost))
             return;
 
-        if (shooter.Id.Camp == Camp.Red)
+        if (!economySystem.TryDecreaseCoin(shooter.Id.Camp, cost))
         {
-            economySystem.RedCoin -= cost;
-        }
-        else if (shooter.Id.Camp == Camp.Blue)
-        {
-            economySystem.BlueCoin -= cost;
+            return;
         }
 
         battleSystem.SetAmmoAllowance(shooter, shooter.AmmoAllowance + amount);
@@ -115,17 +111,9 @@ public sealed class SupplySystem(
         if (!entitySystem.TryGetEntity(id, out IHealthed healthed))
             return false;
         var cost = CalcRemoteSupplyBloodPrice();
-        if (id.Camp == Camp.Red)
+        if (!economySystem.TryDecreaseCoin(id.Camp, cost))
         {
-            if (economySystem.RedCoin < cost)
-                return false;
-            economySystem.RedCoin -= cost;
-        }
-        else if (id.Camp == Camp.Blue)
-        {
-            if (economySystem.BlueCoin < cost)
-                return false;
-            economySystem.BlueCoin -= cost;
+            return false;
         }
 
         timeSystem.RegisterOnceAction(
@@ -149,17 +137,9 @@ public sealed class SupplySystem(
         if (shooter.AmmoType != PerformanceSystemBase.AmmoType17mm)
             return false;
         const int cost = 150;
-        if (id.Camp == Camp.Red)
+        if (!economySystem.TryDecreaseCoin(id.Camp, cost))
         {
-            if (economySystem.RedCoin < cost)
-                return false;
-            economySystem.RedCoin -= cost;
-        }
-        else if (id.Camp == Camp.Blue)
-        {
-            if (economySystem.BlueCoin < cost)
-                return false;
-            economySystem.BlueCoin -= cost;
+            return false;
         }
 
         timeSystem.RegisterOnceAction(
@@ -180,17 +160,9 @@ public sealed class SupplySystem(
         if (shooter.AmmoType != PerformanceSystemBase.AmmoType42mm)
             return false;
         const int cost = 150;
-        if (id.Camp == Camp.Red)
+        if (!economySystem.TryDecreaseCoin(id.Camp, cost))
         {
-            if (economySystem.RedCoin < cost)
-                return false;
-            economySystem.RedCoin -= cost;
-        }
-        else if (id.Camp == Camp.Blue)
-        {
-            if (economySystem.BlueCoin < cost)
-                return false;
-            economySystem.BlueCoin -= cost;
+            return false;
         }
 
         timeSystem.RegisterOnceAction(

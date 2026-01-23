@@ -60,19 +60,7 @@ public sealed class RM2025ucLifeSystem : LifeSystem
             return false;
 
         var cost = CalcBuyReviveRequiredCoin(id);
-        if (id.Camp == Camp.Red)
-        {
-            if (EconomySystem.RedCoin < cost)
-                return false;
-            EconomySystem.RedCoin -= cost;
-        }
-        else if (id.Camp == Camp.Blue)
-        {
-            if (EconomySystem.BlueCoin < cost)
-                return false;
-            EconomySystem.BlueCoin -= cost;
-        }
-        else
+        if (!EconomySystem.TryDecreaseCoin(id.Camp, cost))
         {
             return false;
         }

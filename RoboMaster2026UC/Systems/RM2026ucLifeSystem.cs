@@ -55,19 +55,7 @@ public sealed class RM2026ucLifeSystem(ZoneSystem zoneSystem, EconomySystem econ
             return false;
 
         var cost = CalcBuyReviveRequiredCoin(id);
-        if (id.Camp == Camp.Red)
-        {
-            if (economySystem.RedCoin < cost)
-                return false;
-            economySystem.RedCoin -= cost;
-        }
-        else if (id.Camp == Camp.Blue)
-        {
-            if (economySystem.BlueCoin < cost)
-                return false;
-            economySystem.BlueCoin -= cost;
-        }
-        else
+        if (!economySystem.TryDecreaseCoin(id.Camp, cost))
         {
             return false;
         }
@@ -232,7 +220,7 @@ public sealed class RM2026ucLifeSystem(ZoneSystem zoneSystem, EconomySystem econ
          */
         if (healthed is Base b)
         {
-                
+            
         }
             
         return base.IncreaseHealth(healthed, value);

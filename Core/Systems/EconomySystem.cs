@@ -9,19 +9,7 @@ public sealed class EconomySystem(ICacheProvider<int> economyBox, ILogger Logger
     private static readonly int RedCoinCacheKey = "RedCoin".Sum();
     private static readonly int BlueCoinCacheKey = "BlueCoin".Sum();
 
-    public int RedCoin
-    {
-        get => economyBox.Load(RedCoinCacheKey);
-        set
-        {
-            if (value > RedCoin)
-            {
-                RedTotalCoin += value - RedCoin;
-            }
-
-            economyBox.Save(RedCoinCacheKey, value);
-        }
-    }
+    public int RedCoin => economyBox.Load(RedCoinCacheKey);
 
     public int RedTotalCoin
     {
@@ -29,25 +17,17 @@ public sealed class EconomySystem(ICacheProvider<int> economyBox, ILogger Logger
         private set => economyBox.Save(RedCoinCacheKey + 1, value);
     }
 
-    public int BlueCoin
-    {
-        get => economyBox.Load(BlueCoinCacheKey);
-        set
-        {
-            if (value > BlueCoin)
-            {
-                BlueTotalCoin += value - BlueCoin;
-            }
+    public int RedCoinCost => RedTotalCoin - RedCoin;
 
-            economyBox.Save(BlueCoinCacheKey, value);
-        }
-    }
+    public int BlueCoin => economyBox.Load(BlueCoinCacheKey);
 
     public int BlueTotalCoin
     {
         get => economyBox.Load(BlueCoinCacheKey + 1);
         private set => economyBox.Save(BlueCoinCacheKey + 1, value);
     }
+
+    public int BlueCoinCost => BlueTotalCoin - BlueCoin;
 
     public int GetCoin(Camp camp)
     {
@@ -58,41 +38,63 @@ public sealed class EconomySystem(ICacheProvider<int> economyBox, ILogger Logger
             _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null),
         };
     }
-
-    public void SetCoin(Camp camp, int value)
+        
+    public void AddCoin(Camp camp, int amount)
     {
+        if (amount < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(amount), amount, null);
+        }
+        
         switch (camp)
         {
             case Camp.Red:
-                RedCoin = value;
+                RedTotalCoin += amount;
+                economyBox.Save(RedCoinCacheKey, RedCoin + amount);
                 break;
             case Camp.Blue:
-                BlueCoin = value;
+                BlueTotalCoin += amount;
+                economyBox.Save(BlueCoinCacheKey, BlueCoin + amount);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(camp), camp, null);
         }
     }
-        
-    public void AddCoin(Camp camp, int value)
+
+    public bool TryDecreaseCoin(Camp camp, int amount)
     {
+        if (amount < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(amount), amount, "should not pass negative value");
+        }
+        
         switch (camp)
         {
             case Camp.Red:
-                RedCoin += value;
+                if (RedCoin < amount)
+                {
+                    return false;
+                }
+                economyBox.Save(RedCoinCacheKey, RedCoin - amount);
                 break;
             case Camp.Blue:
-                BlueCoin += value;
+                if (BlueCoin < amount)
+                {
+                    return false;
+                }
+                economyBox.Save(BlueCoinCacheKey, BlueCoin - amount);
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(camp), camp, null);
         }
+
+        return true;
     }
 
     public Task Reset(CancellationToken cancellation = new CancellationToken())
     {
-        RedCoin = 0;
-        BlueCoin = 0;
+        economyBox.Save(RedCoinCacheKey, 0);
+        economyBox.Save(BlueCoinCacheKey, 0);
         return Task.CompletedTask;
     }
 }

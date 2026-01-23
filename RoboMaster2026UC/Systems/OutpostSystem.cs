@@ -29,6 +29,7 @@ public sealed partial class OutpostSystem(
     IMatchConfiguration matchConfiguration,
     ICommandPublisher commandPublisher,
     EntitySystem entitySystem,
+    LifeSystem lifeSystem,
     BuffSystem buffSystem)
     : ISystem
 {
@@ -197,5 +198,15 @@ public sealed partial class OutpostSystem(
     {
         var id = camp == Camp.Red ? RedOutpostZoneId : BlueOutpostZoneId;
         boolCacheBox.WithWriterNamespace(id).Save(OutpostZoneDeactivatedCacheKey, deactivated);
+    }
+
+    /// <summary>
+    /// 重建前哨站
+    /// </summary>
+    /// <param name="camp"></param>
+    public void Rebuild(Camp camp)
+    {
+        var o = entitySystem.Entities[camp == Camp.Red ? Identity.RedOutpost : Identity.BlueOutpost] as Outpost;
+        lifeSystem.IncreaseHealth(o, 750);
     }
 }

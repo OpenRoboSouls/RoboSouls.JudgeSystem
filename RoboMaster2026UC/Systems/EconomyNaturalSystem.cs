@@ -30,8 +30,8 @@ public sealed class EconomyNaturalSystem(
             0,
             () =>
             {
-                economySystem.RedCoin = matchConfiguration.GetInitialCoin(Camp.Red);
-                economySystem.BlueCoin = matchConfiguration.GetInitialCoin(Camp.Blue);
+                economySystem.AddCoin(Camp.Red, matchConfiguration.GetInitialCoin(Camp.Red));
+                economySystem.AddCoin(Camp.Blue, matchConfiguration.GetInitialCoin(Camp.Blue));
             }
         );
         timeSystem.RegisterOnceAction(JudgeSystemStage.Match, 60, () => BothSideAddMoney(50));
@@ -47,8 +47,8 @@ public sealed class EconomyNaturalSystem(
     private Task BothSideAddMoney(int money)
     {
         logger.Info($"[EconomyNatural] Both side add money: {money}");
-        economySystem.RedCoin += money;
-        economySystem.BlueCoin += money;
+        economySystem.AddCoin(Camp.Red, money);
+        economySystem.AddCoin(Camp.Blue, money);
 
         return Task.CompletedTask;
     }

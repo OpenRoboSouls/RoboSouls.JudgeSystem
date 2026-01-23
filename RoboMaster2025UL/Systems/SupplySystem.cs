@@ -116,13 +116,9 @@ public sealed class SupplySystem : ISystem
         if (!CheckCanBuy(shooter.Id, shooter.AmmoType, amount, out var cost))
             return;
 
-        if (shooter.Id.Camp == Camp.Red)
+        if (!EconomySystem.TryDecreaseCoin(shooter.Id.Camp, cost))
         {
-            EconomySystem.RedCoin -= cost;
-        }
-        else if (shooter.Id.Camp == Camp.Blue)
-        {
-            EconomySystem.BlueCoin -= cost;
+            return;
         }
 
         BattleSystem.SetAmmoAllowance(shooter, shooter.AmmoAllowance + amount);

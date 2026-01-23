@@ -415,15 +415,8 @@ public sealed partial class ExchangerSystem : ISystem
                 multiplier
             )
         );
-
-        if (camp == Camp.Red)
-        {
-            EconomySystem.RedCoin += gain;
-        }
-        else
-        {
-            EconomySystem.BlueCoin += gain;
-        }
+        
+        EconomySystem.AddCoin(camp, gain);
     }
 
     /// <summary>
