@@ -4,85 +4,123 @@ using System.Threading.Tasks;
 using RoboSouls.JudgeSystem.RoboMaster2026UC.Entities;
 using RoboSouls.JudgeSystem.RoboMaster2026UC.Events;
 using RoboSouls.JudgeSystem.Systems;
+using VContainer;
 using VitalRouter;
 
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 
 /// <summary>
-/// 空中机器人机制
-///
+/// 空中支援
+/// 每局比赛中，空中机器人拥有 750 发允许发弹量。在七分钟比赛阶段，空中机器人不能从任何途径获取弹
+/// 丸。
 /// 比赛开始时，空中机器人拥有 30 秒空中支援时间，随后每 1 分钟获得额外 20 秒空中支援时间。
-/// 云台手可以通过裁判系统选手端呼叫或暂停空中支援。 在空中支援时间内，空中机器人将获得第一视角画
-/// 面，同时空中机器人与停机坪不接触时，可发射弹丸。在七分钟比赛阶段，空中机器人不能从任何途径获
-/// 取弹丸。 空中支援期间，机器人发射机构解锁，反之锁定。
-/// 在空中支援时间耗尽后，若云台手未暂停空中支援，此后每秒额外的空中支援时间都将消耗 1 金币， 详见
-/// “表 5-8 兑换规则” 。
-/// 每局比赛中，空中机器人拥有 1500 发允许发弹量
+/// 云台手可以通过裁判系统选手端呼叫或暂停空中支援。在空中支援时间内，空中机器人将获得第一视角画
+/// 面，同时空中机器人与停机坪不接触时，可发射弹丸。空中支援期间，机器人发射机构解锁，反之锁定。
+/// 在空中支援时间耗尽后，若云台手未暂停空中支援，此后每秒额外的空中支援时间都将消耗 1 金币，详见
+/// “表 5-8 兑换规则”。
+/// 空中机器人被雷达反制
+/// 雷达系统上可安装激光发射装置，用于瞄准和照射空中机器人上的激光检测模块。仅在对方空中机器人发
+/// 起空中支援时，己方雷达系统上的激光发射装置及其执行机构上电。空中机器人具有“被瞄准进度” P，取
+/// 值范围为 0（初始及最小值）至 100（最大值）。当 P 达到 100 时，空中机器人的发射机构被锁定，同
+/// 时 P 归零，锁定状态持续 45 秒后解除。每局比赛中，最多可通过该机制对空中机器人发射机构进行 3 次
+/// 锁定。112 © 2025 大疆 版权所有
+/// “被瞄准进度”计算逻辑如下所示：
+/// 参数设定：
+///  t：当前激光连续照射的时长
+///  Δt：判定周期，固定为 0.1 秒
+///  n：连续判定次数（照射开始时 n=0，每触发一次判定 n 加 1）
+/// 判定规则：
+/// 当空中机器人激光检测模块未被激光照射时，进度 P 以速率 0.5/s 匀速衰减，但不会小于 0，同时 t、 n
+/// 立即归零；
+/// 当空中机器人激光检测模块被激光照射时， P 停止衰减。每当 t 累计满 0.1 秒，触发一次进度增加：
+///  第 1 个 0.1 秒： P=P+1
+///  第 2 个 0.1 秒： P=P+2
+///  第 n 个 0.1 秒： P=P+n
+/// 若单次持续照射时间不足 0.1 秒即中断，则 t、 n 立即归零
 /// </summary>
-public sealed class AerialSystem(
+[Routes]
+public sealed partial class AerialSystem(
     EntitySystem entitySystem,
     ITimeSystem timeSystem,
     ICacheWriter<bool> boolCacheBoxWriter,
     ICacheWriter<float> floatCacheBoxWriter,
     ICacheProvider<double> doubleCache,
+    ICacheProvider<int> intCache,
     ICommandPublisher publisher,
     EconomySystem economySystem,
     BattleSystem battleSystem,
+    BuffSystem buffSystem,
+    ILogger logger,
+    Router router,
     ModuleSystem moduleSystem)
     : ISystem
 {
-    public const int AerialAmmoAllowance = 1500;
+    [Inject]
+    internal void Inject(Router r)
+    {
+        MapTo(r);
+    }
+    
+    public const int AerialAmmoAllowance = 750;
+    public const int MaxRadarCounterCount = 3;
 
     public Task Reset(CancellationToken cancellation = new CancellationToken())
     {
         timeSystem.RegisterRepeatAction(
             1,
-            () =>
+            async () =>
             {
                 if (entitySystem.TryGetOperatedEntity(Identity.RedAerial, out Aerial redAerial))
                 {
-                    return AirStrikeTimeSettlement(redAerial);
+                    await AirStrikeTimeSettlement(redAerial);
                 }
-
-                return Task.CompletedTask;
-            }
-        );
-
-        timeSystem.RegisterRepeatAction(
-            1,
-            () =>
-            {
-                if (
-                    entitySystem.TryGetOperatedEntity(
-                        Identity.BlueAerial,
-                        out Aerial blueAerial
-                    )
-                )
+                
+                if (entitySystem.TryGetOperatedEntity(Identity.BlueAerial, out Aerial blueAerial))
                 {
-                    return AirStrikeTimeSettlement(blueAerial);
+                    await AirStrikeTimeSettlement(blueAerial);
                 }
-
-                return Task.CompletedTask;
+            }
+        );
+        
+        timeSystem.RegisterRepeatAction(
+            0.1,
+            async () =>
+            {
+                if (entitySystem.TryGetOperatedEntity(Identity.RedAerial, out Aerial redAerial))
+                {
+                    await AerialRadarLockSettlement(redAerial);
+                }
+                
+                if (entitySystem.TryGetOperatedEntity(Identity.BlueAerial, out Aerial blueAerial))
+                {
+                    await AerialRadarLockSettlement(blueAerial);
+                }
             }
         );
 
-        SetAirStrikeTime(entitySystem.Entities[Identity.RedAerial] as Aerial, 0);
-        SetAirStrikeTime(entitySystem.Entities[Identity.BlueAerial] as Aerial, 0);
+        
+        var redAerial = (Aerial)entitySystem.Entities[Identity.RedAerial];
+        var blueAerial = (Aerial)entitySystem.Entities[Identity.BlueAerial];
+        
+        SetAirStrikeTime(redAerial, 0);
+        SetAirStrikeTime(blueAerial, 0);
 
+        // 比赛开始时，空中机器人拥有 30 秒空中支援时间
         timeSystem.RegisterOnceAction(
             JudgeSystemStage.Match,
             0,
             () =>
             {
-                AddAirStrikeTime(entitySystem.Entities[Identity.RedAerial] as Aerial, 30);
-                AddAirStrikeTime(entitySystem.Entities[Identity.BlueAerial] as Aerial, 30);
+                AddAirStrikeTime(redAerial, 30);
+                AddAirStrikeTime(blueAerial, 30);
             }
         );
 
+        // 随后每 1 分钟获得额外 20 秒空中支援时间
         void AddAct()
         {
-            AddAirStrikeTime(entitySystem.Entities[Identity.RedAerial] as Aerial, 20);
-            AddAirStrikeTime(entitySystem.Entities[Identity.BlueAerial] as Aerial, 20);
+            AddAirStrikeTime(redAerial, 20);
+            AddAirStrikeTime(blueAerial, 20);
         }
 
         timeSystem.RegisterOnceAction(JudgeSystemStage.Match, 60, AddAct);
@@ -97,16 +135,10 @@ public sealed class AerialSystem(
             0,
             () =>
             {
-                battleSystem.SetAmmoAllowance(
-                    entitySystem.Entities[Identity.RedAerial] as Aerial,
-                    AerialAmmoAllowance
-                );
-                battleSystem.SetAmmoAllowance(
-                    entitySystem.Entities[Identity.BlueAerial] as Aerial,
-                    AerialAmmoAllowance
-                );
-                SetIsAirStriking(entitySystem.Entities[Identity.RedAerial] as Aerial, false);
-                SetIsAirStriking(entitySystem.Entities[Identity.BlueAerial] as Aerial, false);
+                battleSystem.SetAmmoAllowance(redAerial, AerialAmmoAllowance);
+                battleSystem.SetAmmoAllowance(blueAerial, AerialAmmoAllowance);
+                SetIsAirStriking(redAerial, false);
+                SetIsAirStriking(blueAerial, false);
             }
         );
 
@@ -152,7 +184,10 @@ public sealed class AerialSystem(
 
     private void SetIsAirStriking(Aerial aerial, bool isAirStriking)
     {
-        moduleSystem.SetGunLocked(aerial.Id, !isAirStriking);
+        if (!IsRadarCountering(aerial))
+        {
+            moduleSystem.SetGunLocked(aerial.Id, !isAirStriking);
+        }
 
         if (aerial.IsAirStriking == isAirStriking)
             return;
@@ -263,30 +298,153 @@ public sealed class AerialSystem(
         }
         else
         {
-            if (aerial.Id.Camp == Camp.Red)
+            if (!economySystem.TryDecreaseCoin(aerial.Id.Camp, 1))
             {
-                if (economySystem.RedCoin > 1)
-                {
-                    economySystem.RedCoin -= 1;
-                }
-                else
-                {
-                    StopAirStrike(aerial.Id.Camp);
-                }
-            }
-            else if (aerial.Id.Camp == Camp.Blue)
-            {
-                if (economySystem.BlueCoin > 1)
-                {
-                    economySystem.BlueCoin -= 1;
-                }
-                else
-                {
-                    StopAirStrike(aerial.Id.Camp);
-                }
+                StopAirStrike(aerial.Id.Camp);
             }
         }
 
         return Task.CompletedTask;
+    }
+
+    private static readonly int RadarLockProgressCacheKey = "radar_lock_progress".Sum();
+
+    /// <summary>
+    /// 雷达标记进度P
+    /// </summary>
+    /// <param name="aerial"></param>
+    /// <returns></returns>
+    public double GetRadarLockProgress(Aerial aerial)
+    {
+        return doubleCache.WithReaderNamespace(aerial.Id).LoadOrDefault(RadarLockProgressCacheKey, 0);
+    }
+    
+    private void SetRadarLockProgress(Aerial aerial, double amount)
+    {
+        doubleCache.WithWriterNamespace(aerial.Id).Save(RadarLockProgressCacheKey, amount);
+    }
+
+    /// <summary>
+    /// 当前激光连续照射的时长t
+    /// </summary>
+    /// <param name="aerial"></param>
+    /// <returns></returns>
+    public double GetRadarLockDuration(Aerial aerial)
+    {
+        if (!buffSystem.TryGetBuff(aerial.Id, RM2026ucBuffs.RadarLock, out float startTime))
+        {
+            return 0;
+        }
+
+        return timeSystem.Time - startTime;
+    }
+
+    /// <summary>
+    /// 连续判定次数
+    /// </summary>
+    /// <param name="aerial"></param>
+    /// <returns></returns>
+    public int GetRadarLockCount(Aerial aerial)
+    {
+        var duration = GetRadarLockDuration(aerial);
+
+        return (int) Math.Floor(duration / 0.1);
+    }
+    
+    private static readonly int RadarCounterCountCacheKey = "radar_counter_count".Sum();
+
+    /// <summary>
+    /// 触发雷达压制次数
+    /// </summary>
+    /// <param name="aerial"></param>
+    /// <returns></returns>
+    public int GetRadarCounterCount(Aerial aerial)
+    {
+        return intCache.WithReaderNamespace(aerial.Id).LoadOrDefault(RadarCounterCountCacheKey, 0);
+    }
+
+    private void SetRadarCounterCount(Aerial aerial, int amount)
+    {
+        intCache.WithWriterNamespace(aerial.Id).Save(RadarCounterCountCacheKey, amount);
+    }
+
+    /// <summary>
+    /// 是否正在被雷达压制
+    /// </summary>
+    /// <param name="aerial"></param>
+    /// <returns></returns>
+    public bool IsRadarCountering(Aerial aerial)
+    {
+        return buffSystem.TryGetBuff(aerial.Id, RM2026ucBuffs.RadarCountered, out Buff _);
+    } 
+
+    /// <summary>
+    /// 雷达反制结算
+    /// </summary>
+    /// <param name="aerial"></param>
+    /// <returns></returns>
+    private Task AerialRadarLockSettlement(Aerial aerial)
+    {
+        var progress = GetRadarLockProgress(aerial);
+        var counterCount = GetRadarCounterCount(aerial);
+        if (counterCount >= MaxRadarCounterCount)
+        {
+            return Task.CompletedTask;
+        }
+
+        if (progress >= 100)
+        {
+            router.PublishAsync(new AerialCounteredEvent(aerial.Id, timeSystem.Time));
+            buffSystem.AddBuff(aerial.Id, RM2026ucBuffs.RadarCountered, 0, TimeSpan.FromSeconds(45));
+            SetRadarCounterCount(aerial, counterCount+1);
+            moduleSystem.SetGunLocked(aerial.Id, true);
+            
+            SetRadarLockProgress(aerial, 0);
+        }
+        
+        if (!buffSystem.TryGetBuff(aerial.Id, RM2026ucBuffs.RadarLock, out float startTime))
+        {
+            // 当空中机器人激光检测模块未被激光照射时，进度 P 以速率 0.5/s 匀速衰减，但不会小于 0
+            progress -= 0.05;
+            SetRadarLockProgress(aerial, Math.Max(progress, 0));
+            return Task.CompletedTask;
+        }
+        
+        /*
+当空中机器人激光检测模块被激光照射时， P 停止衰减。每当 t 累计满 0.1 秒，触发一次进度增加：
+ 第 1 个 0.1 秒： P=P+1
+ 第 2 个 0.1 秒： P=P+2
+ 第 n 个 0.1 秒： P=P+n
+         */
+        
+        var lockCount = Math.Floor(timeSystem.Time - startTime);
+        progress += lockCount;
+        SetRadarLockProgress(aerial, Math.Max(progress, 100));
+
+        return Task.CompletedTask;
+    }
+
+    [Route]
+    private void OnRadarLocked(AerialLockedEvent evt)
+    {
+        if (!entitySystem.TryGetOperatedEntity(evt.AerialId, out Aerial a))
+        {
+            logger.Warning("wtf locking unattended aerial", evt);
+            return;
+        }
+        
+        buffSystem.AddBuff(a.Id, RM2026ucBuffs.RadarLock, timeSystem.TimeAsFloat, TimeSpan.MaxValue);
+    }
+
+    [Route]
+    private void OnRadarLockStopped(AerialLockStoppedEvent evt)
+    {
+        if (!entitySystem.TryGetOperatedEntity(evt.AerialId, out Aerial a))
+        {
+            logger.Warning("wtf locking unattended aerial", evt);
+            return;
+        }
+        
+        buffSystem.RemoveBuff(a.Id, RM2026ucBuffs.RadarLock);
     }
 }
