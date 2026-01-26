@@ -18,6 +18,11 @@
         "resolved": "2.71.0",
         "contentHash": "r8zHZm7kHdMrtujnkcuQ0BNDH2969at/8Va1ZzQgVblaQzR7tm8JlA3G+5Z5IFbvvf9PcAr1/VcoSR+g7j4Nyw=="
       },
+      "murmurhash": {
+        "type": "Transitive",
+        "resolved": "1.0.3",
+        "contentHash": "56dW8jgSsvGs/tULn+r1UbS+o0rBvgMj+6Lta6uao4j8Kzx1kVxMf56LPKO070VqjWcGyMB4K4R6M4gVKutG9A=="
+      },
       "System.Buffers": {
         "type": "Transitive",
         "resolved": "4.5.1",
@@ -63,7 +68,8 @@
       "RoboSouls.JudgeSystem.Core": {
         "type": "Project",
         "dependencies": {
-          "VitalRouter": "[2.0.4, )"
+          "VitalRouter": "[2.0.4, )",
+          "murmurhash": "[1.0.3, )"
         }
       }
     }

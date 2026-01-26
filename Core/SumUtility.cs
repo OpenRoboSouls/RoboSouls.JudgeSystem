@@ -1,15 +1,16 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
+using Murmur;
 
 namespace RoboSouls.JudgeSystem;
 
 public static class SumUtility
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int Sum(this string s, int seed = 0)
+    public static int Sum(this string s, uint seed = 0)
     {
-        return SumSha256(s, seed);
+        return HashMurmur3(s, seed);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -31,5 +32,25 @@ public static class SumUtility
     {
         var h = Sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(s));
         return BitConverter.ToInt32(h, 0) + seed;
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int HashFNV1a(string str) {
+        uint hash = 2166136261; // FNV_offset_basis
+        foreach (char c in str) {
+            hash ^= (byte)c;    // 异或
+            hash *= 16777619;   // FNV_prime
+        }
+        return (int)hash;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int HashMurmur3(string str, uint seed = 0)
+    {
+        HashAlgorithm m = MurmurHash.Create32(managed: false);
+        HashAlgorithm s = MurmurHash.Create32(seed);
+        var h = m.ComputeHash(System.Text.Encoding.UTF8.GetBytes(str));
+
+        return BitConverter.ToInt32(h, 0);
     }
 }

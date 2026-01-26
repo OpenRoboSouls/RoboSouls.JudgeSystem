@@ -10,6 +10,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="murmurhash" Version="1.0.3" />
       <PackageReference Include="VitalRouter" Version="2.0.4" />
     </ItemGroup>
 
