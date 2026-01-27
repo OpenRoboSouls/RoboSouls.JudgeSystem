@@ -103,8 +103,8 @@ public sealed partial class AerialSystem(
         var redAerial = (Aerial)entitySystem.Entities[Identity.RedAerial];
         var blueAerial = (Aerial)entitySystem.Entities[Identity.BlueAerial];
         
-        SetAirStrikeTime(redAerial, 0);
-        SetAirStrikeTime(blueAerial, 0);
+        redAerial.AirStrikeTimeRemaining = 0;
+        blueAerial.AirStrikeTimeRemaining = 0;
 
         // 比赛开始时，空中机器人拥有 30 秒空中支援时间
         timeSystem.RegisterOnceAction(
@@ -112,16 +112,16 @@ public sealed partial class AerialSystem(
             0,
             () =>
             {
-                AddAirStrikeTime(redAerial, 30);
-                AddAirStrikeTime(blueAerial, 30);
+                redAerial.AirStrikeTimeRemaining += 30;
+                blueAerial.AirStrikeTimeRemaining += 30;
             }
         );
 
         // 随后每 1 分钟获得额外 20 秒空中支援时间
         void AddAct()
         {
-            AddAirStrikeTime(redAerial, 20);
-            AddAirStrikeTime(blueAerial, 20);
+            redAerial.AirStrikeTimeRemaining += 20;
+            blueAerial.AirStrikeTimeRemaining += 20;
         }
 
         timeSystem.RegisterOnceAction(JudgeSystemStage.Match, 60, AddAct);
@@ -193,9 +193,7 @@ public sealed partial class AerialSystem(
         if (aerial.IsAirStriking == isAirStriking)
             return;
 
-        boolCacheBoxWriter
-            .WithWriterNamespace(aerial.Id)
-            .Save(Aerial.IsAirStrikingCacheKey, isAirStriking);
+        aerial.IsAirStriking = isAirStriking;
 
         if (isAirStriking)
         {
@@ -239,40 +237,19 @@ public sealed partial class AerialSystem(
         return cooldownRemaining > 0;
     }
 
-    private static readonly int AirstrikeStartTimeCacheKey = "airstrike_start_time".Sum();
-    private static readonly int AirstrikeStopTimeCacheKey = "airstrike_stop_time".Sum();
-
-    public double GetAirStrikeStartTime(in Identity id)
+    
+    [Property(nameof(doubleCache))]
+    public partial double AirStrikeStartTime
     {
-        return doubleCache.WithReaderNamespace(id).Load(AirstrikeStartTimeCacheKey);
+        get;
+        private set;
     }
-
-    private void SetAirStrikeStartTime(in Identity id, double time)
+    
+    [Property(nameof(doubleCache))]
+    public partial double AirStrikeStopTime
     {
-        doubleCache.WithWriterNamespace(id).Save(AirstrikeStartTimeCacheKey, time);
-    }
-
-    private void AddAirStrikeTime(Aerial aerial, float time)
-    {
-        var airStrikeTimeRemaining = aerial.AirStrikeTimeRemaining + time;
-        SetAirStrikeTime(aerial, airStrikeTimeRemaining);
-    }
-
-    private void SetAirStrikeTime(Aerial aerial, float time)
-    {
-        floatCacheBoxWriter
-            .WithWriterNamespace(aerial.Id)
-            .Save(Aerial.AirStrikeTimeRemainingCacheKey, time);
-    }
-
-    private void SetAirStrikeStopTime(in Identity id, double time)
-    {
-        doubleCache.WithWriterNamespace(id).Save(AirstrikeStopTimeCacheKey, time);
-    }
-
-    public double GetAirStrikeStopTime(in Identity id)
-    {
-        return doubleCache.WithReaderNamespace(id).Load(AirstrikeStopTimeCacheKey);
+        get;
+        private set;
     }
 
     /// <summary>
@@ -295,7 +272,7 @@ public sealed partial class AerialSystem(
 
         if (aerial.AirStrikeTimeRemaining > 0)
         {
-            AddAirStrikeTime(aerial, -1);
+            aerial.AirStrikeTimeRemaining -= 1;
         }
         else
         {
@@ -307,22 +284,15 @@ public sealed partial class AerialSystem(
 
         return Task.CompletedTask;
     }
-
-    private static readonly int RadarLockProgressCacheKey = "radar_lock_progress".Sum();
-
+    
     /// <summary>
     /// 雷达标记进度P
     /// </summary>
-    /// <param name="aerial"></param>
-    /// <returns></returns>
-    public double GetRadarLockProgress(Aerial aerial)
+    [Property(nameof(doubleCache), PropertyStorageMode.Single | PropertyStorageMode.Identity)]
+    public partial double RadarLockProgress
     {
-        return doubleCache.WithReaderNamespace(aerial.Id).LoadOrDefault(RadarLockProgressCacheKey, 0);
-    }
-    
-    private void SetRadarLockProgress(Aerial aerial, double amount)
-    {
-        doubleCache.WithWriterNamespace(aerial.Id).Save(RadarLockProgressCacheKey, amount);
+        get;
+        private set;
     }
 
     /// <summary>
@@ -351,29 +321,16 @@ public sealed partial class AerialSystem(
 
         return (int) Math.Floor(duration / 0.1);
     }
+
     
-    private static readonly int RadarCounterCountCacheKey = "radar_counter_count".Sum();
-
     /// <summary>
-    /// 触发雷达压制次数
+    /// 受到雷达压制次数
     /// </summary>
-    /// <param name="aerial"></param>
-    /// <returns></returns>
-    public int GetRadarCounterCount(Aerial aerial)
-    {
-        return intCache.WithReaderNamespace(aerial.Id).LoadOrDefault(RadarCounterCountCacheKey, 0);
-    }
-
-    [Property(nameof(intCache))]
+    [Property(nameof(intCache), PropertyStorageMode.Single | PropertyStorageMode.Identity)]
     public partial int RadarCounterCount
     {
         get;
         private set;
-    }
-
-    private void SetRadarCounterCount(Aerial aerial, int amount)
-    {
-        intCache.WithWriterNamespace(aerial.Id).Save(RadarCounterCountCacheKey, amount);
     }
 
     /// <summary>
@@ -393,8 +350,8 @@ public sealed partial class AerialSystem(
     /// <returns></returns>
     private Task AerialRadarLockSettlement(Aerial aerial)
     {
-        var progress = GetRadarLockProgress(aerial);
-        var counterCount = GetRadarCounterCount(aerial);
+        var progress = GetRadarLockProgress(aerial.Id);
+        var counterCount = GetRadarCounterCount(aerial.Id);
         if (counterCount >= MaxRadarCounterCount)
         {
             return Task.CompletedTask;
@@ -404,17 +361,17 @@ public sealed partial class AerialSystem(
         {
             router.PublishAsync(new AerialCounteredEvent(aerial.Id, timeSystem.Time));
             buffSystem.AddBuff(aerial.Id, RM2026ucBuffs.RadarCountered, 0, TimeSpan.FromSeconds(45));
-            SetRadarCounterCount(aerial, counterCount+1);
+            SetRadarCounterCount(aerial.Id, counterCount+1);
             moduleSystem.SetGunLocked(aerial.Id, true);
             
-            SetRadarLockProgress(aerial, 0);
+            SetRadarLockProgress(aerial.Id, 0);
         }
         
         if (!buffSystem.TryGetBuff(aerial.Id, RM2026ucBuffs.RadarLock, out float startTime))
         {
             // 当空中机器人激光检测模块未被激光照射时，进度 P 以速率 0.5/s 匀速衰减，但不会小于 0
             progress -= 0.05;
-            SetRadarLockProgress(aerial, Math.Max(progress, 0));
+            SetRadarLockProgress(aerial.Id, Math.Max(progress, 0));
             return Task.CompletedTask;
         }
         
@@ -427,7 +384,7 @@ public sealed partial class AerialSystem(
         
         var lockCount = Math.Floor(timeSystem.Time - startTime);
         progress += lockCount;
-        SetRadarLockProgress(aerial, Math.Max(progress, 100));
+        SetRadarLockProgress(aerial.Id, Math.Max(progress, 100));
 
         return Task.CompletedTask;
     }

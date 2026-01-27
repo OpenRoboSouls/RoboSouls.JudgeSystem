@@ -1,7 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
-using Murmur;
 
 namespace RoboSouls.JudgeSystem;
 
@@ -10,7 +9,7 @@ public static class SumUtility
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int Sum(this string s, uint seed = 0)
     {
-        return HashMurmur3(s, seed);
+        return HashFNV1a(s);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -42,15 +41,5 @@ public static class SumUtility
             hash *= 16777619;   // FNV_prime
         }
         return (int)hash;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int HashMurmur3(string str, uint seed = 0)
-    {
-        HashAlgorithm m = MurmurHash.Create32(managed: false);
-        HashAlgorithm s = MurmurHash.Create32(seed);
-        var h = m.ComputeHash(System.Text.Encoding.UTF8.GetBytes(str));
-
-        return BitConverter.ToInt32(h, 0);
     }
 }

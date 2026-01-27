@@ -3,7 +3,7 @@ using System.Linq;
 using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using RoboSouls.JudgeSystem.Attributes;
+using SourceGenerator.Utils;
 
 namespace SourceGenerator;
 
@@ -18,7 +18,7 @@ public class HashedGenerator: IIncrementalGenerator
         public string Accessibility;
     }
 
-    private const string AttributeName = nameof(Hashed);
+    private const string AttributeName = "Hashed";
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -99,6 +99,7 @@ public class HashedGenerator: IIncrementalGenerator
         }
 
         var value = target.Value;
+        var hash = Hash.HashCode(value.PropertyName);
 
         var code = $$"""
                      using RoboSouls.JudgeSystem;
@@ -107,7 +108,7 @@ public class HashedGenerator: IIncrementalGenerator
                      {
                          partial class {{value.ClassName}}
                          {
-                             {{value.Accessibility}} partial int {{value.PropertyName}} => "{{value.PropertyName}}".Sum();
+                             {{value.Accessibility}} partial int {{value.PropertyName}} => {{hash}};
                          }
                      }
                      """;

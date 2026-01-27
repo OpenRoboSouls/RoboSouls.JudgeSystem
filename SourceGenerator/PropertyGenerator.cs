@@ -1,16 +1,24 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using RoboSouls.JudgeSystem;
-using RoboSouls.JudgeSystem.Attributes;
+using SourceGenerator.Utils;
 
 namespace SourceGenerator;
 
 [Generator]
 public class PropertyGenerator: IIncrementalGenerator
 {
+    [Flags]
+    private enum PropertyStorageMode
+    {
+        Single,
+        Identity,
+        Camp
+    }
+    
     private struct PropertyContext
     {
         public string NamespaceName;
@@ -21,10 +29,11 @@ public class PropertyGenerator: IIncrementalGenerator
         public string GetterAccessibility;
         public string SetterAccessibility;
         public string ProviderVarName;
-        public bool ServerNamespace;
+        public PropertyStorageMode StorageMode;
+        public string IdVar;
     }
 
-    private const string AttributeName = nameof(Property);
+    private const string AttributeName = "Property";
     
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -59,19 +68,44 @@ public class PropertyGenerator: IIncrementalGenerator
 
         if (attribute?.ArgumentList == null)
         {
-            return null;
+            // return null;
+            return new PropertyContext
+            {
+                PropertyName = "attribute argument list is null",
+                ClassName = p.Identifier.ValueText
+            };
         }
         
-        // public class Property(string storageProvider, bool serverNamespace = false): Attribute
-        var attributeArguments = attribute.ArgumentList.Arguments;
-        var storageProvider = attributeArguments[0].ToString();
-        var serverNamespace = attributeArguments.Count > 1 && attributeArguments[1].ToString() == "true";
-
         if (context.SemanticModel.GetDeclaredSymbol(context.Node) is not IPropertySymbol symbol)
         {
-            return null;
+            // return null;
+            return new PropertyContext
+            {
+                PropertyName = context.SemanticModel.GetDeclaredSymbol(context.Node)?.ToDisplayString() ?? "symbol is null",
+                ClassName = p.Identifier.ValueText
+            };
         }
-
+        
+        var attributeData = symbol.GetAttributes()
+            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == "RoboSouls.JudgeSystem.Attributes.Property");
+        
+        if (attributeData == null)
+        {
+            // return null;
+            return new PropertyContext
+            {
+                PropertyName = "attribute data is null： " + symbol.GetAttributes().Length + " " + string.Join(", ", symbol.GetAttributes().Select(a => a.AttributeClass?.ToDisplayString())),
+                ClassName = p.Identifier.ValueText
+            };
+        }
+        
+        var storageProvider = attributeData.ConstructorArguments[0].Value?.ToString();
+        var modeArgument = attributeData.ConstructorArguments[1];
+        var modeValue = (PropertyStorageMode)(modeArgument.Value ?? 0);
+        var idArgument = attributeData.ConstructorArguments.Length > 2
+            ? attributeData.ConstructorArguments[2].Value?.ToString()
+            : null;
+        
         var propertyName = p.Identifier.ValueText;
         var className = symbol.ContainingType.Name;
         var ns = symbol.ContainingNamespace.ToString();
@@ -96,7 +130,7 @@ public class PropertyGenerator: IIncrementalGenerator
         var getterAccess = symbol.GetMethod?.DeclaredAccessibility ?? Accessibility.NotApplicable;
         var setterAccess = symbol.SetMethod?.DeclaredAccessibility ?? Accessibility.NotApplicable;
         
-        return new PropertyContext()
+        return new PropertyContext
         {
             NamespaceName = ns,
             ClassName = className,
@@ -106,7 +140,8 @@ public class PropertyGenerator: IIncrementalGenerator
             GetterAccessibility = getterAccess.ToString().ToLower(),
             SetterAccessibility = setterAccess.ToString().ToLower(),
             ProviderVarName = storageProvider,
-            ServerNamespace = serverNamespace
+            StorageMode = modeValue,
+            IdVar = idArgument
         };
     }
 
@@ -118,17 +153,21 @@ public class PropertyGenerator: IIncrementalGenerator
         }
 
         var value = target.Value;
-        var key = value.PropertyName.Sum();
+        var key = Hash.HashCode(value.PropertyName);
 
-        var identitySegment = $$"""
-                                public {{value.PropertyType}} Get{{value.PropertyName}}(Identity id) => {{value.ProviderVarName}}.WithReaderNamespace(id).Load({{key}});
-                                private void Set{{value.PropertyName}}(Identity id, int value) => {{value.ProviderVarName}}.WithWriterNamespace(id).Save({{key}}, value);
+        var identitySegment = $"""
+                                {value.GetterAccessibility} {value.PropertyType} Get{value.PropertyName}(in Identity id) => {value.ProviderVarName}.WithReaderNamespace(id).Load({key});
+                                {value.SetterAccessibility} void Set{value.PropertyName}(in Identity id, {value.PropertyType} value) => {value.ProviderVarName}.WithWriterNamespace(id).Save({key}, value);
                                 """;
+        var hasIdentity = (value.StorageMode & PropertyStorageMode.Identity) != 0;
 
-        var campSegment = $$"""
-                            public int Get{{value.PropertyName}}(Camp camp) => {{value.ProviderVarName}}.WithReaderNamespace(new Identity(camp, 0)).Load({{key}});
-                            private void Set{{value.PropertyName}}(Camp camp, int value) => {{value.ProviderVarName}}.WithWriterNamespace(new Identity(camp, 0)).Save({{key}}, value);
+        var campSegment = $"""
+                            {value.GetterAccessibility} {value.PropertyType} Get{value.PropertyName}(in Camp camp) => {value.ProviderVarName}.WithReaderNamespace(new Identity(camp, 0)).Load({key});
+                            {value.SetterAccessibility} void Set{value.PropertyName}(in Camp camp, {value.PropertyType} value) => {value.ProviderVarName}.WithWriterNamespace(new Identity(camp, 0)).Save({key}, value);
                             """;
+        var hasCamp = (value.StorageMode & PropertyStorageMode.Camp) != 0;
+        
+        var singleId = string.IsNullOrEmpty(value.IdVar) ? "Identity.Server" : value.IdVar;
 
         var code = $$"""
                      using RoboSouls.JudgeSystem;
@@ -137,21 +176,19 @@ public class PropertyGenerator: IIncrementalGenerator
                      {
                         partial class {{value.ClassName}}
                         {
-                            public partial int RadarCounterCount
+                            public partial {{value.PropertyType}} {{value.PropertyName}}
                             {
-                                get => intCache.Load({{key}});
-                                private set => intCache.Save({{key}}, value);
+                                get => {{value.ProviderVarName}}.WithReaderNamespace({{singleId}}).Load({{key}});
+                                {{value.SetterAccessibility}} set => {{value.ProviderVarName}}.WithWriterNamespace({{singleId}}).Save({{key}}, value);
                             }
                          
-                            public int GetRadarCounterCount(Identity id) => intCache.WithReaderNamespace(id).Load({{key}});
-                            private void SetRadarCounterCount(Identity id, int value) => intCache.WithWriterNamespace(id).Save({{key}}, value);
+                            {{(hasCamp ? campSegment : "")}}
                          
-                            public int GetRadarCounterCount(Camp camp) => intCache.WithReaderNamespace(new Identity(camp, 0)).Load({{key}});
-                            private void SetRadarCounterCount(Camp camp, int value) => intCache.WithWriterNamespace(new Identity(camp, 0)).Save({{key}}, value);
+                            {{(hasIdentity ? identitySegment : "")}}
                          }
                      }
                      """;
         
-        spc.AddSource(value.ClassName + ".g.cs", code);
+        spc.AddSource($"{value.ClassName}.{value.PropertyName}.g.cs", code);
     }
 }

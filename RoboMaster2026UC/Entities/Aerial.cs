@@ -1,14 +1,12 @@
-﻿using RoboSouls.JudgeSystem.Entities;
+﻿using RoboSouls.JudgeSystem.Attributes;
+using RoboSouls.JudgeSystem.Entities;
 using RoboSouls.JudgeSystem.Systems;
 using VContainer;
 
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Entities;
 
-public class Aerial : RobotBase, IShooter, IExperienced
+public partial class Aerial : RobotBase, IShooter, IExperienced
 {
-    public static readonly int AirStrikeTimeRemainingCacheKey = "AirStrikeTimeRemaining".Sum();
-    public static readonly int IsAirStrikingCacheKey = "IsAirStriking".Sum();
-
     public Aerial(Identity id)
         : base(id) { }
 
@@ -19,22 +17,30 @@ public class Aerial : RobotBase, IShooter, IExperienced
     internal ICacheReader<int> IntCacheBox { get; set; }
 
     [Inject]
-    internal ICacheReader<float> FloatCacheBox { get; set; }
+    internal ICacheProvider<float> FloatCacheBox { get; set; }
 
     [Inject]
-    internal ICacheReader<bool> BoolCacheBox { get; set; }
-
+    internal ICacheProvider<bool> BoolCacheBox { get; set; }
+    
     /// <summary>
     /// 空中支援剩余时间
     /// </summary>
-    public float AirStrikeTimeRemaining =>
-        FloatCacheBox.WithReaderNamespace(Id).Load(AirStrikeTimeRemainingCacheKey);
+    [Property(nameof(FloatCacheBox), PropertyStorageMode.Single, nameof(Id))]
+    public partial float AirStrikeTimeRemaining
+    {
+        get;
+        internal set;
+    }
 
     /// <summary>
     /// 是否正在空中支援
     /// </summary>
-    public bool IsAirStriking =>
-        BoolCacheBox.WithReaderNamespace(Id).Load(IsAirStrikingCacheKey);
+    [Property(nameof(BoolCacheBox), PropertyStorageMode.Single, nameof(Id))]
+    public partial bool IsAirStriking
+    {
+        get;
+        internal set;
+    }
 
     public int AmmoAllowance =>
         IntCacheBox.WithReaderNamespace(Id).Load(IShooter.AmmoAllowanceCacheKey);
