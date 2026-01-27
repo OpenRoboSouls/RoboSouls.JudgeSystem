@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using RoboSouls.JudgeSystem.Attributes;
 using RoboSouls.JudgeSystem.RoboMaster2026UC.Entities;
 using RoboSouls.JudgeSystem.RoboMaster2026UC.Events;
 using RoboSouls.JudgeSystem.Systems;
@@ -361,6 +362,13 @@ public sealed partial class AerialSystem(
     public int GetRadarCounterCount(Aerial aerial)
     {
         return intCache.WithReaderNamespace(aerial.Id).LoadOrDefault(RadarCounterCountCacheKey, 0);
+    }
+
+    [Property(nameof(intCache))]
+    public partial int RadarCounterCount
+    {
+        get;
+        private set;
     }
 
     private void SetRadarCounterCount(Aerial aerial, int amount)

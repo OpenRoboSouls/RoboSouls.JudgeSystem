@@ -7,10 +7,15 @@
         <AssemblyName>RoboSouls.JudgeSystem.RoboMaster2026UC</AssemblyName>
         <RootNamespace>RoboSouls.JudgeSystem.RoboMaster2026UC</RootNamespace>
         <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+        <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+        <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)\Generated Files</CompilerGeneratedFilesOutputPath>
     </PropertyGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\Core\Core.csproj" />
+      <ProjectReference Include="..\SourceGenerator\SourceGenerator.csproj" 
+                        OutputItemType="Analyzer"
+                        ReferenceOutputAssembly="false" />
     </ItemGroup>
 
     <ItemGroup>

@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using RoboSouls.JudgeSystem.Attributes;
 using RoboSouls.JudgeSystem.Entities;
 using RoboSouls.JudgeSystem.Events;
 using RoboSouls.JudgeSystem.RoboMaster2026UC.Entities;
@@ -43,7 +44,8 @@ public sealed partial class BaseSystem(
     /// </summary>
     public static readonly Identity BlueBaseZoneId = new Identity(Camp.Blue, 50);
 
-    private static readonly int BaseZoneDeactivatedCacheKey = "BaseZoneDeactivated".Sum();
+    [Hashed]
+    private static partial int BaseZoneDeactivatedCacheKey { get; }
 
     public Task Reset(CancellationToken cancellation = new CancellationToken())
     {
