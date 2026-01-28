@@ -7,8 +7,7 @@ public sealed class RM2025ucOperatorSystem : OperatorSystem
 {
     private static readonly int ControlModeCacheKey = "control_mode".Sum();
 
-    [Inject]
-    internal ICacheProvider<byte> ByteCacheBox { get; set; }
+    [Inject] internal ICacheProvider<byte> ByteCacheBox { get; set; }
 
     public ControlMode GetControlMode(in Identity id)
     {
@@ -31,7 +30,8 @@ public sealed class RM2025ucOperatorSystem : OperatorSystem
             ByteCacheBox.WithWriterNamespace(id).Save(ControlModeCacheKey, (byte)mode);
             return true;
         }
-        else if (id.IsSentry() || id.IsHero())
+
+        if (id.IsSentry() || id.IsHero())
         {
             if (mode == ControlMode.AutoExchange)
                 return false;
@@ -46,17 +46,17 @@ public sealed class RM2025ucOperatorSystem : OperatorSystem
 public enum ControlMode : byte
 {
     /// <summary>
-    /// 手动控制
+    ///     手动控制
     /// </summary>
     Manual,
 
     /// <summary>
-    /// 半自动控制
+    ///     半自动控制
     /// </summary>
     SemiAuto,
 
     /// <summary>
-    /// 自动兑矿
+    ///     自动兑矿
     /// </summary>
-    AutoExchange,
+    AutoExchange
 }

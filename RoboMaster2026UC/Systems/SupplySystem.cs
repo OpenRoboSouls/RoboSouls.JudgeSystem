@@ -7,7 +7,7 @@ using RoboSouls.JudgeSystem.Systems;
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 
 /// <summary>
-/// 补给系统
+///     补给系统
 /// </summary>
 public sealed class SupplySystem(
     EntitySystem entitySystem,
@@ -22,10 +22,10 @@ public sealed class SupplySystem(
     : ISystem
 {
     public const ushort SupplyZoneId = 70;
-    public static readonly Identity RedSupplyZoneId = new Identity(Camp.Red, SupplyZoneId);
-    public static readonly Identity BlueSupplyZoneId = new Identity(Camp.Blue, SupplyZoneId);
+    public static readonly Identity RedSupplyZoneId = new(Camp.Red, SupplyZoneId);
+    public static readonly Identity BlueSupplyZoneId = new(Camp.Blue, SupplyZoneId);
 
-    public Task Reset(CancellationToken cancellation = new CancellationToken())
+    public Task Reset(CancellationToken cancellation = new())
     {
         timeSystem.RegisterRepeatAction(1, SupplyUpdateLoop);
 
@@ -54,15 +54,9 @@ public sealed class SupplySystem(
 
     public static bool IsInSupplyZone(ZoneSystem zoneSystem, in Identity entity)
     {
-        if (entity.Camp == Camp.Red)
-        {
-            return zoneSystem.IsInZone(entity, RedSupplyZoneId);
-        }
+        if (entity.Camp == Camp.Red) return zoneSystem.IsInZone(entity, RedSupplyZoneId);
 
-        if (entity.Camp == Camp.Blue)
-        {
-            return zoneSystem.IsInZone(entity, BlueSupplyZoneId);
-        }
+        if (entity.Camp == Camp.Blue) return zoneSystem.IsInZone(entity, BlueSupplyZoneId);
 
         return false;
     }
@@ -73,7 +67,7 @@ public sealed class SupplySystem(
         {
             PerformanceSystemBase.AmmoType17mm => 1,
             PerformanceSystemBase.AmmoType42mm => 10,
-            _ => int.MaxValue,
+            _ => int.MaxValue
         };
     }
 
@@ -98,10 +92,7 @@ public sealed class SupplySystem(
         if (!CheckCanBuy(shooter.Id.Camp, shooter.AmmoType, amount, out var cost))
             return;
 
-        if (!economySystem.TryDecreaseCoin(shooter.Id.Camp, cost))
-        {
-            return;
-        }
+        if (!economySystem.TryDecreaseCoin(shooter.Id.Camp, cost)) return;
 
         battleSystem.SetAmmoAllowance(shooter, shooter.AmmoAllowance + amount);
     }
@@ -111,10 +102,7 @@ public sealed class SupplySystem(
         if (!entitySystem.TryGetEntity(id, out IHealthed healthed))
             return false;
         var cost = CalcRemoteSupplyBloodPrice();
-        if (!economySystem.TryDecreaseCoin(id.Camp, cost))
-        {
-            return false;
-        }
+        if (!economySystem.TryDecreaseCoin(id.Camp, cost)) return false;
 
         timeSystem.RegisterOnceAction(
             6,
@@ -137,17 +125,11 @@ public sealed class SupplySystem(
         if (shooter.AmmoType != PerformanceSystemBase.AmmoType17mm)
             return false;
         const int cost = 150;
-        if (!economySystem.TryDecreaseCoin(id.Camp, cost))
-        {
-            return false;
-        }
+        if (!economySystem.TryDecreaseCoin(id.Camp, cost)) return false;
 
         timeSystem.RegisterOnceAction(
             6,
-            () =>
-            {
-                battleSystem.SetAmmoAllowance(shooter, shooter.AmmoAllowance + 100);
-            }
+            () => { battleSystem.SetAmmoAllowance(shooter, shooter.AmmoAllowance + 100); }
         );
 
         return true;
@@ -160,17 +142,11 @@ public sealed class SupplySystem(
         if (shooter.AmmoType != PerformanceSystemBase.AmmoType42mm)
             return false;
         const int cost = 150;
-        if (!economySystem.TryDecreaseCoin(id.Camp, cost))
-        {
-            return false;
-        }
+        if (!economySystem.TryDecreaseCoin(id.Camp, cost)) return false;
 
         timeSystem.RegisterOnceAction(
             6,
-            () =>
-            {
-                battleSystem.SetAmmoAllowance(shooter, shooter.AmmoAllowance + 10);
-            }
+            () => { battleSystem.SetAmmoAllowance(shooter, shooter.AmmoAllowance + 10); }
         );
 
         return true;
@@ -203,8 +179,8 @@ public sealed class SupplySystem(
     }
 
     /// <summary>
-    /// 地面机器人占领己方补给区增益点时，将获得每秒上限血量 10%的回血增益。在比赛开始 4 分钟后，当机
-    /// 器人处于脱战状态，且占领己方补给区增益点时，其将获得每秒上限血量 25%的回血增益，且底盘功率上
+    ///     地面机器人占领己方补给区增益点时，将获得每秒上限血量 10%的回血增益。在比赛开始 4 分钟后，当机
+    ///     器人处于脱战状态，且占领己方补给区增益点时，其将获得每秒上限血量 25%的回血增益，且底盘功率上
     ///     限提升 1 倍，但提升后的底盘功率上限为 200W。当机器人不处于脱战状态， 25%的回血增益和底盘功率
     ///     上限提升效果立即失效；当机器人未占领己方补给区增益点持续 4 秒后，底盘功率上限提升效果失效
     /// </summary>
@@ -214,7 +190,7 @@ public sealed class SupplySystem(
         if (
             timeSystem.Stage != JudgeSystemStage.Match
             || !entitySystem.TryGetOperatedEntity(id, out IHealthed healthed)
-            || !id.IsHero() && !id.IsInfantry() && !id.IsSentry() && !id.IsEngineer()
+            || (!id.IsHero() && !id.IsInfantry() && !id.IsSentry() && !id.IsEngineer())
             || healthed.IsDead()
         )
             return Task.CompletedTask;
@@ -230,15 +206,13 @@ public sealed class SupplySystem(
                 && timeSystem.StageTimeElapsed > 240
                 && buffSystem.TryGetBuff(id, Buffs.OutOfCombatBuff, out Buff _)
             )
-            {
                 rate = 0.25f;
-            }
 
             var reviveAmount = (uint)
                 Math.Ceiling(performanceSystem.GetMaxHealth(healthed) * rate);
             lifeSystem.IncreaseHealth(healthed, reviveAmount);
             buffSystem.AddBuff(id, Buffs.PowerBuff, 2f, TimeSpan.MaxValue);
-                
+
             buffSystem.RemoveBuff(id, RM2026ucBuffs.WeakenedBuff);
         }
         else if (

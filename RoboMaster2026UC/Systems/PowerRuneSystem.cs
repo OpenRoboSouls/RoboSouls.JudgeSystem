@@ -14,7 +14,7 @@ using Random = System.Random;
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 
 /// <summary>
-/// 能量机关机制
+///     能量机关机制
 /// </summary>
 public class PowerRuneSystem(
     ITimeSystem timeSystem,
@@ -33,18 +33,15 @@ public class PowerRuneSystem(
     private static readonly int PowerRuneRecordCacheKey = "PowerRuneRecord".Sum();
     private static readonly int PowerRuneStartTimeCacheKey = "PowerRuneStartTime".Sum();
 
-    private static readonly Identity RedPowerRuneIdentity = new Identity(Camp.Red, 333);
-    private static readonly Identity BluePowerRuneIdentity = new Identity(Camp.Blue, 333);
+    private static readonly Identity RedPowerRuneIdentity = new(Camp.Red, 333);
+    private static readonly Identity BluePowerRuneIdentity = new(Camp.Blue, 333);
+
+    private static readonly int BigPowerRuneChanceElapsedCacheKey =
+        "BigPowerRuneChanceElapsed".Sum();
 
     private bool _isPowerRuneClockwise;
 
-    [Inject]
-    internal void Inject(ExperienceSystem e)
-    {
-        experienceSystem.OnExpChange += OnExpChange;
-    }
-
-    public Task Reset(CancellationToken cancellation = new CancellationToken())
+    public Task Reset(CancellationToken cancellation = new())
     {
         _isPowerRuneClockwise = matchConfiguration.Random.Next(0, 2) == 0;
 
@@ -67,6 +64,12 @@ public class PowerRuneSystem(
         return Task.CompletedTask;
     }
 
+    [Inject]
+    internal void Inject(ExperienceSystem e)
+    {
+        experienceSystem.OnExpChange += OnExpChange;
+    }
+
     public double GetPowerRuneTime(Camp camp)
     {
         var startTime = doubleCacheBox
@@ -86,8 +89,8 @@ public class PowerRuneSystem(
     }
 
     /// <summary>
-    /// 小能量机关： 比赛开始 1 分钟后和比赛开始 2 分 30 秒后，能量机关开始旋转，进入可激活状态，能
-    /// 量机关进入可激活状态 30 秒后，若其仍未被激活，则将恢复为不可激活状态。若一方小能量机关进
+    ///     小能量机关： 比赛开始 1 分钟后和比赛开始 2 分 30 秒后，能量机关开始旋转，进入可激活状态，能
+    ///     量机关进入可激活状态 30 秒后，若其仍未被激活，则将恢复为不可激活状态。若一方小能量机关进
     ///     入已激活状态，另一方小能量机关立即变为不可激活状态。
     /// </summary>
     /// <returns></returns>
@@ -104,8 +107,8 @@ public class PowerRuneSystem(
     }
 
     /// <summary>
-    /// 大能量机关： 比赛开始 4 分钟、 5 分 15 秒、 6 分 30 秒后，能量机关开始旋转，进入可激活状态，能
-    /// 量机关进入可激活状态 30 秒后，若其仍未被激活，则将恢复为不可激活状态。大能量机关的每块装
+    ///     大能量机关： 比赛开始 4 分钟、 5 分 15 秒、 6 分 30 秒后，能量机关开始旋转，进入可激活状态，能
+    ///     量机关进入可激活状态 30 秒后，若其仍未被激活，则将恢复为不可激活状态。大能量机关的每块装
     ///     甲模块被划分为 1~10 环。
     /// </summary>
     /// <returns></returns>
@@ -143,10 +146,7 @@ public class PowerRuneSystem(
 
     public void OnActivatedSmallPowerRune(Camp camp)
     {
-        if (!CanPowerRuneActivate(camp))
-        {
-            return;
-        }
+        if (!CanPowerRuneActivate(camp)) return;
 
         logger.Info($"Small Power Rune Activated by {camp}");
 
@@ -155,17 +155,14 @@ public class PowerRuneSystem(
         //
         // Publisher.PublishAsync(new PowerRuneActivatedEvent(false, default, camp));
         // Publisher.PublishAsync(new PowerRuneStopEvent(camp.GetOppositeCamp()));
-            
+
         // 2025uc v2.1.0
         SetPowerRuneCanActivate(camp, false);
         publisher.PublishAsync(new PowerRuneActivatedEvent(false, default, camp));
-            
+
         timeSystem.RegisterOnceAction(
             45,
-            () =>
-            {
-                publisher.PublishAsync(new PowerRuneStopEvent(camp));
-            }
+            () => { publisher.PublishAsync(new PowerRuneStopEvent(camp)); }
         );
 
         // 一方机器人成功激活小能量机关后，该方所有机器人获得 25%的防御增益，持续 45 秒
@@ -203,10 +200,7 @@ public class PowerRuneSystem(
 
     public void OnActivatedBigPowerRune(Camp camp, in PowerRuneActivateRecord record)
     {
-        if (!CanPowerRuneActivate(camp))
-        {
-            return;
-        }
+        if (!CanPowerRuneActivate(camp)) return;
 
         logger.Info($"Big Power Rune Activated by {camp}, Record: {record.ToString()}");
 
@@ -214,10 +208,7 @@ public class PowerRuneSystem(
         publisher.PublishAsync(new PowerRuneActivatedEvent(true, record, camp));
         timeSystem.RegisterOnceAction(
             45,
-            () =>
-            {
-                publisher.PublishAsync(new PowerRuneStopEvent(camp));
-            }
+            () => { publisher.PublishAsync(new PowerRuneStopEvent(camp)); }
         );
 
         // 一方机器人激活大能量机关后， 系统将根据其击中的总环数为该方所有机器人提供相应的攻击和防御增益，
@@ -258,19 +249,16 @@ public class PowerRuneSystem(
             const int totalExp = 500;
             var expPerRobot = totalExp / expRobots.Count;
 
-            foreach (var robot in expRobots)
-            {
-                experienceSystem.AddExp(robot, expPerRobot);
-            }
+            foreach (var robot in expRobots) experienceSystem.AddExp(robot, expPerRobot);
         }
 
         SetLastPowerRuneActivateTime(camp, timeSystem.Time);
     }
 
     /// <summary>
-    /// 小能量机关增益持续期间内，所有英
+    ///     小能量机关增益持续期间内，所有英
     ///     雄、步兵机器人在获得经验时，额外获得原经验 100%的经验， 一方在一次小能量机关增益期间内通
-    ///    过此方式最多共获得 800 点额外经验。
+    ///     过此方式最多共获得 800 点额外经验。
     /// </summary>
     /// <param name="experienced"></param>
     /// <param name="exp"></param>
@@ -281,15 +269,9 @@ public class PowerRuneSystem(
         )
             return;
         var expGained = GetSmallPowerRuneSessionExpGained(experienced.Id.Camp);
-        if (expGained + exp > 800)
-        {
-            exp = 800 - expGained;
-        }
+        if (expGained + exp > 800) exp = 800 - expGained;
 
-        if (exp <= 0)
-        {
-            return;
-        }
+        if (exp <= 0) return;
 
         SetSmallPowerRuneSessionExpGained(experienced.Id.Camp, expGained + exp);
         experienceSystem.AddExp(experienced, exp, true);
@@ -353,7 +335,7 @@ public class PowerRuneSystem(
             48 => 4.2f,
             49 => 4.6f,
             50 => 5f,
-            _ => 0,
+            _ => 0
         };
     }
 
@@ -367,7 +349,7 @@ public class PowerRuneSystem(
             48 => 0.40f,
             49 => 0.45f,
             50 => 0.50f,
-            _ => 0,
+            _ => 0
         };
     }
 
@@ -378,12 +360,9 @@ public class PowerRuneSystem(
             > 330 => 3,
             > 255 => 2,
             > 180 => 1,
-            _ => 0,
+            _ => 0
         };
     }
-
-    private static readonly int BigPowerRuneChanceElapsedCacheKey =
-        "BigPowerRuneChanceElapsed".Sum();
 
     private int GetBigPowerRuneChanceElapsed(Camp camp)
     {
@@ -435,10 +414,7 @@ public class PowerRuneSystem(
 
     public void RequestStartBigPowerRune(Camp camp)
     {
-        if (!CanStartBigPowerRune(camp))
-        {
-            return;
-        }
+        if (!CanStartBigPowerRune(camp)) return;
 
         var elapsed = GetBigPowerRuneChanceElapsed(camp);
         SetBigPowerRuneChanceElapsed(camp, elapsed + 1);

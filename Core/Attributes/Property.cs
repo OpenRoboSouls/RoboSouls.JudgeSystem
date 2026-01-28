@@ -10,10 +10,10 @@ public enum PropertyStorageMode
     Camp
 }
 
-[AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
-public class Property(string storageProvider, 
+[AttributeUsage(AttributeTargets.Property)]
+public class Property(
+    string storageProvider,
     PropertyStorageMode mode = PropertyStorageMode.Single | PropertyStorageMode.Identity | PropertyStorageMode.Camp,
     string? id = null) : Attribute
 {
-    
 }

@@ -6,22 +6,17 @@ using VitalRouter;
 namespace RoboSouls.JudgeSystem.RoboMaster2025UC.Systems;
 
 /// <summary>
-/// 地形跨越增益点（公路）
+///     地形跨越增益点（公路）
 /// </summary>
 [Routes]
 public sealed partial class RoadTerrainLeapZoneSystem : TerrainLeapZoneSystem
 {
-    [Inject]
-    internal void Inject(Router router)
-    {
-        MapTo(router);
-    }
-
-    public static readonly Identity RoadTerrainLeapTriggerZoneId = new Identity(
+    public static readonly Identity RoadTerrainLeapTriggerZoneId = new(
         Camp.Judge,
         130
     );
-    public static readonly Identity RoadTerrainLeapActivationZoneId = new Identity(
+
+    public static readonly Identity RoadTerrainLeapActivationZoneId = new(
         Camp.Judge,
         140
     );
@@ -31,7 +26,15 @@ public sealed partial class RoadTerrainLeapZoneSystem : TerrainLeapZoneSystem
     public override int MaxActivationTime => 3;
     public override int BuffDuration => 5;
 
-    protected override void OnActivationStart(in Identity operatorId) { }
+    [Inject]
+    internal void Inject(Router router)
+    {
+        MapTo(router);
+    }
+
+    protected override void OnActivationStart(in Identity operatorId)
+    {
+    }
 
     protected override void OnActivationSuccess(in Identity operatorId, double activationTime)
     {
@@ -40,10 +43,7 @@ public sealed partial class RoadTerrainLeapZoneSystem : TerrainLeapZoneSystem
         //     益，持续时间为 5 秒
         //      同一机器人在获得地形跨越增益（公路）后的 15 秒内，不能重复获得地形跨越增益（公路）
         base.OnActivationSuccess(operatorId, activationTime);
-        if (BuffSystem.TryGetBuff(operatorId, RM2025ucBuffs.TerrainLeapRoadBuff, out Buff _))
-        {
-            return;
-        }
+        if (BuffSystem.TryGetBuff(operatorId, RM2025ucBuffs.TerrainLeapRoadBuff, out Buff _)) return;
 
         BuffSystem.AddBuff(
             operatorId,
@@ -57,18 +57,16 @@ public sealed partial class RoadTerrainLeapZoneSystem : TerrainLeapZoneSystem
             >= 120 and < 180 => 2,
             >= 180 and < 300 => 3,
             >= 300 and < 420 => 5,
-            _ => 0,
+            _ => 0
         };
 
         if (cooldownBuffValue > 0)
-        {
             BuffSystem.AddBuff(
                 operatorId,
                 Buffs.CoolDownBuff,
                 cooldownBuffValue,
                 TimeSpan.FromSeconds(BuffDuration)
             );
-        }
 
         BuffSystem.AddBuff(
             operatorId,

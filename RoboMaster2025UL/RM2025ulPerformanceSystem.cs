@@ -26,93 +26,93 @@ public sealed class RM2025ulPerformanceSystem : PerformanceSystemBase
     );
 
     /// <summary>
-    /// 功率优先
+    ///     功率优先
     /// </summary>
     private static readonly ReadOnlyCollection<int> PowerTreeHeroPowerPriority =
         Array.AsReadOnly(new[] { 70, 75, 80, 85, 90, 95, 100, 105, 110, 120 });
 
     /// <summary>
-    /// 血量优先
+    ///     血量优先
     /// </summary>
     private static readonly ReadOnlyCollection<int> PowerTreeHeroHealthPriority =
         Array.AsReadOnly(new[] { 55, 60, 65, 70, 75, 80, 85, 90, 100, 120 });
 
     /// <summary>
-    /// 功率优先
+    ///     功率优先
     /// </summary>
     private static readonly ReadOnlyCollection<int> PowerTreeInfantryPowerPriority =
         Array.AsReadOnly(new[] { 60, 65, 70, 75, 80, 85, 90, 95, 100, 100 });
 
     /// <summary>
-    /// 血量优先
+    ///     血量优先
     /// </summary>
     private static readonly ReadOnlyCollection<int> PowerTreeInfantryHealthPriority =
         Array.AsReadOnly(new[] { 45, 50, 55, 60, 65, 70, 75, 80, 90, 100 });
 
     /// <summary>
-    /// 功率优先
+    ///     功率优先
     /// </summary>
     private static readonly ReadOnlyCollection<uint> HealthTreeHeroPowerPriority =
         Array.AsReadOnly(new uint[] { 200, 225, 250, 275, 300, 325, 350, 375, 400, 500 });
 
     /// <summary>
-    /// 血量优先
+    ///     血量优先
     /// </summary>
     private static readonly ReadOnlyCollection<uint> HealthTreeHeroHealthPriority =
         Array.AsReadOnly(new uint[] { 250, 275, 300, 325, 350, 375, 400, 425, 450, 500 });
 
     /// <summary>
-    /// 功率优先
+    ///     功率优先
     /// </summary>
     private static readonly ReadOnlyCollection<uint> HealthTreeInfantryPowerPriority =
         Array.AsReadOnly(new uint[] { 150, 175, 200, 225, 250, 275, 300, 325, 350, 400 });
 
     /// <summary>
-    /// 血量优先
+    ///     血量优先
     /// </summary>
     private static readonly ReadOnlyCollection<uint> HealthTreeInfantryHealthPriority =
         Array.AsReadOnly(new uint[] { 200, 225, 250, 275, 300, 325, 350, 375, 400, 400 });
 
     /// <summary>
-    /// 默认
+    ///     默认
     /// </summary>
     private static readonly ReadOnlyCollection<float> HeatTree42mmDefault = Array.AsReadOnly(
         new float[] { 100, 140, 180, 220, 260, 300, 340, 380, 420, 500 }
     );
 
     /// <summary>
-    /// 默认
+    ///     默认
     /// </summary>
     private static readonly ReadOnlyCollection<int> CooldownTree42mmDefault = Array.AsReadOnly(
-        new int[] { 40, 48, 56, 64, 72, 80, 88, 96, 104, 120 }
+        new[] { 40, 48, 56, 64, 72, 80, 88, 96, 104, 120 }
     );
 
     /// <summary>
-    /// 爆发优先
+    ///     爆发优先
     /// </summary>
     private static readonly ReadOnlyCollection<float> HeatTree17mmBurst = Array.AsReadOnly(
         new float[] { 200, 250, 300, 350, 400, 450, 500, 550, 600, 650 }
     );
 
     /// <summary>
-    /// 爆发优先
+    ///     爆发优先
     /// </summary>
     private static readonly ReadOnlyCollection<int> CooldownTree17mmBurst = Array.AsReadOnly(
-        new int[] { 10, 15, 20, 25, 30, 35, 40, 45, 50, 60 }
+        new[] { 10, 15, 20, 25, 30, 35, 40, 45, 50, 60 }
     );
 
     /// <summary>
-    /// 冷却优先
+    ///     冷却优先
     /// </summary>
     private static readonly ReadOnlyCollection<float> HeatTree17mmCooldown = Array.AsReadOnly(
         new float[] { 50, 85, 120, 155, 190, 225, 260, 295, 330, 400 }
     );
 
     /// <summary>
-    /// 冷却优先
+    ///     冷却优先
     /// </summary>
     private static readonly ReadOnlyCollection<int> CooldownTree17mmCooldown = Array.AsReadOnly(
-        new int[] { 40, 45, 50, 55, 60, 65, 70, 75, 80, 80 }
+        new[] { 40, 45, 50, 55, 60, 65, 70, 75, 80, 80 }
     );
 
     public override int GetStageTimeLimit(JudgeSystemStage stage)
@@ -125,7 +125,7 @@ public sealed class RM2025ulPerformanceSystem : PerformanceSystemBase
             JudgeSystemStage.Countdown => 5,
             JudgeSystemStage.Match => 5 * 60,
             JudgeSystemStage.Settlement => 10,
-            _ => throw new ArgumentOutOfRangeException(nameof(stage), stage, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(stage), stage, null)
         };
     }
 
@@ -157,16 +157,16 @@ public sealed class RM2025ulPerformanceSystem : PerformanceSystemBase
             {
                 ChassisTypePower => PowerTreeHeroPowerPriority[GetLevel(h) - 1],
                 ChassisTypeHealth => PowerTreeHeroHealthPriority[GetLevel(h) - 1],
-                _ => MaxPowerFallback,
+                _ => MaxPowerFallback
             },
             Infantry i => chassisd.ChassisType switch
             {
                 ChassisTypePower => PowerTreeInfantryPowerPriority[GetLevel(i) - 1],
                 ChassisTypeHealth => PowerTreeInfantryHealthPriority[GetLevel(i) - 1],
-                _ => MaxPowerFallback,
+                _ => MaxPowerFallback
             },
             Sentry => SentryMaxPower,
-            _ => MaxPowerFallback,
+            _ => MaxPowerFallback
         };
     }
 
@@ -178,25 +178,22 @@ public sealed class RM2025ulPerformanceSystem : PerformanceSystemBase
             {
                 ChassisTypePower => PowerTreeHeroPowerPriority[0],
                 ChassisTypeHealth => PowerTreeHeroHealthPriority[0],
-                _ => MaxPowerFallback,
+                _ => MaxPowerFallback
             },
             Infantry i => i.ChassisType switch
             {
                 ChassisTypePower => PowerTreeInfantryPowerPriority[0],
                 ChassisTypeHealth => PowerTreeInfantryHealthPriority[0],
-                _ => MaxPowerFallback,
+                _ => MaxPowerFallback
             },
             Sentry => SentryMaxPower,
-            _ => MaxPowerFallback,
+            _ => MaxPowerFallback
         };
     }
 
     public override uint GetMaxHealth(IHealthed healthed, int level = -1)
     {
-        if (level == -1 && healthed is IExperienced exp)
-        {
-            level = GetLevel(exp);
-        }
+        if (level == -1 && healthed is IExperienced exp) level = GetLevel(exp);
 
         return healthed switch
         {
@@ -204,16 +201,16 @@ public sealed class RM2025ulPerformanceSystem : PerformanceSystemBase
             {
                 ChassisTypePower => HealthTreeHeroPowerPriority[level - 1],
                 ChassisTypeHealth => HealthTreeHeroHealthPriority[level - 1],
-                _ => MaxHealthFallback,
+                _ => MaxHealthFallback
             },
             Infantry i => i.ChassisType switch
             {
                 ChassisTypePower => HealthTreeInfantryPowerPriority[level - 1],
                 ChassisTypeHealth => HealthTreeInfantryHealthPriority[level - 1],
-                _ => MaxHealthFallback,
+                _ => MaxHealthFallback
             },
             Sentry => SentryMaxHealth,
-            _ => MaxHealthFallback,
+            _ => MaxHealthFallback
         };
     }
 
@@ -230,7 +227,7 @@ public sealed class RM2025ulPerformanceSystem : PerformanceSystemBase
             GunType17mmBurst => HeatTree17mmBurst[level - 1],
             GunType17mmCooldown => HeatTree17mmCooldown[level - 1],
             GunType42mmDefault => HeatTree42mmDefault[level - 1],
-            _ => 0,
+            _ => 0
         };
     }
 
@@ -240,7 +237,7 @@ public sealed class RM2025ulPerformanceSystem : PerformanceSystemBase
         {
             AmmoType42mm => 100,
             AmmoType17mm => 10,
-            _ => 0,
+            _ => 0
         };
     }
 
@@ -257,7 +254,7 @@ public sealed class RM2025ulPerformanceSystem : PerformanceSystemBase
             GunType17mmBurst => CooldownTree17mmBurst[level - 1],
             GunType17mmCooldown => CooldownTree17mmCooldown[level - 1],
             GunType42mmDefault => CooldownTree42mmDefault[level - 1],
-            _ => 0,
+            _ => 0
         };
     }
 
@@ -273,12 +270,8 @@ public sealed class RM2025ulPerformanceSystem : PerformanceSystemBase
     public static int GetLevel(int exp)
     {
         for (var i = 0; i < ExperienceTree.Count; i++)
-        {
             if (exp < ExperienceTree[i])
-            {
                 return i + 1;
-            }
-        }
 
         return ExperienceTree.Count + 1;
     }

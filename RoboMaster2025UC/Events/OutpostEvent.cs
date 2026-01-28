@@ -8,12 +8,12 @@ public readonly struct OutpostRotateStartEvent
         IEquatable<OutpostRotateStartEvent>
 {
     /// <summary>
-    /// 是否顺时针旋转
+    ///     是否顺时针旋转
     /// </summary>
     public readonly bool Clockwise;
 
     /// <summary>
-    /// 旋转速度 - rad/s
+    ///     旋转速度 - rad/s
     /// </summary>
     public readonly float RotateSpeed;
 

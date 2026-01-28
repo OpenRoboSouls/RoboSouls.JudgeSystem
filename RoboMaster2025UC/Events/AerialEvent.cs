@@ -4,7 +4,7 @@ using RoboSouls.JudgeSystem.Events;
 namespace RoboSouls.JudgeSystem.RoboMaster2025UC.Events;
 
 /// <summary>
-/// 空中支援开始
+///     空中支援开始
 /// </summary>
 public readonly struct AirstrikeStartEvent
     : IJudgeSystemEvent<AirstrikeStartEvent>,
@@ -46,7 +46,7 @@ public readonly struct AirstrikeStartEvent
 }
 
 /// <summary>
-/// 空中支援结束
+///     空中支援结束
 /// </summary>
 public readonly struct AirstrikeStopEvent
     : IJudgeSystemEvent<AirstrikeStopEvent>,

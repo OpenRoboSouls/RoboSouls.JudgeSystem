@@ -11,11 +11,11 @@ using VitalRouter;
 namespace RoboSouls.JudgeSystem.RoboMaster2024UL.Systems;
 
 /// <summary>
-/// 中心增益点机制
+///     中心增益点机制
 /// </summary>
 public sealed class CentralZoneSystem : ISystem
 {
-    public static readonly Identity CentralZoneId = new Identity(Camp.Judge, 150);
+    public static readonly Identity CentralZoneId = new(Camp.Judge, 150);
 
     public static readonly int BlueEnergyCacheKey = "blueEnergy".Sum();
 
@@ -23,28 +23,23 @@ public sealed class CentralZoneSystem : ISystem
 
     public static readonly int NextActivationTimeCacheKey = "nextActivationTime".Sum();
 
-    [Inject]
-    internal ILogger Logger { get; set; }
+    [Inject] internal ILogger Logger { get; set; }
 
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
+    [Inject] internal ITimeSystem TimeSystem { get; set; }
 
-    [Inject]
-    internal ICacheProvider<int> IntCacheBox { get; set; }
+    [Inject] internal ICacheProvider<int> IntCacheBox { get; set; }
 
-    [Inject]
-    internal ICacheProvider<double> DoubleCacheBox { get; set; }
+    [Inject] internal ICacheProvider<double> DoubleCacheBox { get; set; }
 
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
+    [Inject] internal EntitySystem EntitySystem { get; set; }
 
-    [Inject]
-    internal ZoneSystem ZoneSystem { get; set; }
+    [Inject] internal ZoneSystem ZoneSystem { get; set; }
 
-    [Inject]
-    internal ICommandPublisher CommandPublisher { get; set; }
+    [Inject] internal ICommandPublisher CommandPublisher { get; set; }
+
     public int RedEnergy =>
         IntCacheBox.WithReaderNamespace(CentralZoneId).Load(RedEnergyCacheKey);
+
     public int BlueEnergy =>
         IntCacheBox.WithReaderNamespace(CentralZoneId).Load(BlueEnergyCacheKey);
 
@@ -55,7 +50,7 @@ public sealed class CentralZoneSystem : ISystem
     public double NextActivationTime =>
         DoubleCacheBox.WithReaderNamespace(CentralZoneId).Load(NextActivationTimeCacheKey);
 
-    public Task Reset(CancellationToken cancellation = new CancellationToken())
+    public Task Reset(CancellationToken cancellation = new())
     {
         // “比赛开始1分钟后，中心增益点生效”
         TimeSystem.RegisterOnceAction(
@@ -90,7 +85,7 @@ public sealed class CentralZoneSystem : ISystem
         {
             PerformanceSystemBase.AmmoType17mm => 2,
             PerformanceSystemBase.AmmoType42mm => 20,
-            _ => 0,
+            _ => 0
         };
 
         var camp = victim.Camp;
@@ -99,9 +94,9 @@ public sealed class CentralZoneSystem : ISystem
     }
 
     /// <summary>
-    ///  仅单一兵种占领中心增益点时，该方每秒可获得 10 点能量；
-    ///  如有多个兵种占领中心增益点，但其中不包含哨兵机器人，则该方每秒可获得 10 点能量；
-    ///  如有多个兵种占领中心增益点，且其中包含哨兵机器人，则该方每秒可获得 20 点能量。
+    ///      仅单一兵种占领中心增益点时，该方每秒可获得 10 点能量；
+    ///      如有多个兵种占领中心增益点，但其中不包含哨兵机器人，则该方每秒可获得 10 点能量；
+    ///      如有多个兵种占领中心增益点，且其中包含哨兵机器人，则该方每秒可获得 20 点能量。
     /// </summary>
     /// <param name="camp"></param>
     /// <returns></returns>
@@ -126,7 +121,7 @@ public sealed class CentralZoneSystem : ISystem
     }
 
     /// <summary>
-    /// 占领增益点完成
+    ///     占领增益点完成
     /// </summary>
     private void OnCentralZoneOccupied(Camp camp)
     {
@@ -157,17 +152,9 @@ public sealed class CentralZoneSystem : ISystem
     private void SetCampEnergy(Camp camp, int energy)
     {
         if (camp == Camp.Red)
-        {
             IntCacheBox.WithWriterNamespace(CentralZoneId).Save(RedEnergyCacheKey, energy);
-        }
-        else if (camp == Camp.Blue)
-        {
-            IntCacheBox.WithWriterNamespace(CentralZoneId).Save(BlueEnergyCacheKey, energy);
-        }
+        else if (camp == Camp.Blue) IntCacheBox.WithWriterNamespace(CentralZoneId).Save(BlueEnergyCacheKey, energy);
 
-        if (energy >= 100)
-        {
-            OnCentralZoneOccupied(camp);
-        }
+        if (energy >= 100) OnCentralZoneOccupied(camp);
     }
 }

@@ -11,61 +11,75 @@ namespace RoboSouls.JudgeSystem.RoboMaster2026UL.Systems;
 [Routes]
 public sealed partial class WinPointSystem : OccupyZoneSystemBase
 {
+    private static readonly int WinPointCacheKey = "WinPoint".Sum();
+    public static readonly Identity CentralZoneId = new(Camp.Judge, 150);
+    private bool _bluePointDelta140Dispatched;
+
+    private bool _bluePointDelta70Dispatched;
+
+    /// <summary>
+    ///     红方胜利点首次差140时的200金币增长
+    /// </summary>
+    private bool _redPointDelta140Dispatched;
+
+    /// <summary>
+    ///     红方胜利点首次差70时的200金币增长
+    /// </summary>
+    private bool _redPointDelta70Dispatched;
+
+    [Inject] internal ICacheProvider<int> IntCacheBox { get; set; }
+
+    [Inject] internal ILogger Logger { get; set; }
+
+    [Inject] internal ITimeSystem TimeSystem { get; set; }
+
+    [Inject] internal ICacheProvider<double> DoubleCacheBox { get; set; }
+
+    [Inject] internal EntitySystem EntitySystem { get; set; }
+
+    [Inject] internal ZoneSystem ZoneSystem { get; set; }
+
+    [Inject] internal ICommandPublisher CommandPublisher { get; set; }
+
+    [Inject] internal EconomySystem EconomySystem { get; set; }
+
+    public override Identity ZoneId => CentralZoneId;
+
     [Inject]
     internal void Inject(Router router)
     {
         MapTo(router);
     }
 
-    private static readonly int WinPointCacheKey = "WinPoint".Sum();
-    public static readonly Identity CentralZoneId = new Identity(Camp.Judge, 150);
-
-    [Inject]
-    internal ICacheProvider<int> IntCacheBox { get; set; }
-
-    [Inject]
-    internal ILogger Logger { get; set; }
-
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
-
-    [Inject]
-    internal ICacheProvider<double> DoubleCacheBox { get; set; }
-
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
-
-    [Inject]
-    internal ZoneSystem ZoneSystem { get; set; }
-
-    [Inject]
-    internal ICommandPublisher CommandPublisher { get; set; }
-
-    [Inject]
-    internal EconomySystem EconomySystem { get; set; }
-
-    public override Identity ZoneId => CentralZoneId;
-
-    public override async Task Reset(CancellationToken cancellation = new CancellationToken())
+    public override async Task Reset(CancellationToken cancellation = new())
     {
         await base.Reset(cancellation);
         TimeSystem.RegisterRepeatAction(1, CentralZoneDetectLoop);
-            
+
         SetWinPoint(Camp.Red, RM2026ulPerformanceSystem.InitialWinPoint);
         SetWinPoint(Camp.Blue, RM2026ulPerformanceSystem.InitialWinPoint);
     }
 
-    protected override void OnZoneOccupied(Camp camp) { }
+    protected override void OnZoneOccupied(Camp camp)
+    {
+    }
 
-    protected override void OnZoneLost(Camp camp) { }
+    protected override void OnZoneLost(Camp camp)
+    {
+    }
 
-    protected override void OnOccupierEnterZone(in Identity operatorId) { }
+    protected override void OnOccupierEnterZone(in Identity operatorId)
+    {
+    }
 
-    protected override void OnOccupierLeaveZone(in Identity operatorId) { }
+    protected override void OnOccupierLeaveZone(in Identity operatorId)
+    {
+    }
 
     public int GetWinPoint(Camp camp)
     {
-        return IntCacheBox.WithReaderNamespace(new Identity(camp, 0)).LoadOrDefault(WinPointCacheKey, RM2026ulPerformanceSystem.InitialWinPoint);
+        return IntCacheBox.WithReaderNamespace(new Identity(camp, 0))
+            .LoadOrDefault(WinPointCacheKey, RM2026ulPerformanceSystem.InitialWinPoint);
     }
 
     private void SetWinPoint(Camp camp, int value)
@@ -96,19 +110,6 @@ public sealed partial class WinPointSystem : OccupyZoneSystemBase
         var camp = evt.Victim.Camp;
         SetWinPoint(camp, GetWinPoint(camp) - 20);
     }
-
-    /// <summary>
-    /// 红方胜利点首次差70时的200金币增长
-    /// </summary>
-    private bool _redPointDelta70Dispatched;
-
-    /// <summary>
-    /// 红方胜利点首次差140时的200金币增长
-    /// </summary>
-    private bool _redPointDelta140Dispatched;
-
-    private bool _bluePointDelta70Dispatched;
-    private bool _bluePointDelta140Dispatched;
 
     [Route]
     private void OnWinPoint(WinPointCommand evt)

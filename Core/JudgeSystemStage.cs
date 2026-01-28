@@ -21,9 +21,9 @@ public enum JudgeSystemStage : byte
     Settlement,
 
     /// <summary>
-    /// 技术暂停
+    ///     技术暂停
     /// </summary>
-    Pause,
+    Pause
 }
 
 public static class JudgeSystemStageExtensions
@@ -38,7 +38,7 @@ public static class JudgeSystemStageExtensions
             JudgeSystemStage.Countdown => JudgeSystemStage.Match,
             JudgeSystemStage.Match => JudgeSystemStage.Settlement,
             JudgeSystemStage.Settlement => JudgeSystemStage.OutOfMatch,
-            _ => JudgeSystemStage.OutOfMatch,
+            _ => JudgeSystemStage.OutOfMatch
         };
     }
 }

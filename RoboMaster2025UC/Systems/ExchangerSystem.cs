@@ -13,19 +13,13 @@ using VitalRouter;
 namespace RoboSouls.JudgeSystem.RoboMaster2025UC.Systems;
 
 /// <summary>
-/// 兑换站机制
+///     兑换站机制
 /// </summary>
 [Routes]
 public sealed partial class ExchangerSystem : ISystem
 {
-    [Inject]
-    internal void Inject(Router router)
-    {
-        MapTo(router);
-    }
-
-    public static readonly Identity RedExchangeZoneId = new Identity(Camp.Red, 60);
-    public static readonly Identity BlueExchangeZoneId = new Identity(Camp.Blue, 60);
+    public static readonly Identity RedExchangeZoneId = new(Camp.Red, 60);
+    public static readonly Identity BlueExchangeZoneId = new(Camp.Blue, 60);
 
     private static readonly int ExchangerStateCacheKey = "ExchangerState".Sum();
     private static readonly int ExchangerLevelCacheKey = "ExchangerLevel".Sum();
@@ -38,66 +32,64 @@ public sealed partial class ExchangerSystem : ISystem
         1,
         2,
         3,
-        4,
+        4
     }.AsReadOnly();
+
     private static readonly ReadOnlyCollection<int> AvailableLevelsL2 = new List<int>
     {
         2,
         3,
-        4,
+        4
     }.AsReadOnly();
+
     private static readonly ReadOnlyCollection<int> AvailableLevelsL3 = new List<int>
     {
         3,
-        4,
+        4
     }.AsReadOnly();
+
     private static readonly ReadOnlyCollection<int> AvailableLevelsL4 = new List<int>
     {
-        4,
+        4
     }.AsReadOnly();
 
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
+    [Inject] internal ITimeSystem TimeSystem { get; set; }
 
-    [Inject]
-    internal LifeSystem LifeSystem { get; set; }
+    [Inject] internal LifeSystem LifeSystem { get; set; }
 
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
+    [Inject] internal EntitySystem EntitySystem { get; set; }
 
-    [Inject]
-    internal EconomySystem EconomySystem { get; set; }
+    [Inject] internal EconomySystem EconomySystem { get; set; }
 
-    [Inject]
-    internal ICommandPublisher Publisher { get; set; }
+    [Inject] internal ICommandPublisher Publisher { get; set; }
 
-    [Inject]
-    internal ICacheProvider<byte> ByteCacheProvider { get; set; }
+    [Inject] internal ICacheProvider<byte> ByteCacheProvider { get; set; }
 
-    [Inject]
-    internal ICacheProvider<int> IntCacheProvider { get; set; }
+    [Inject] internal ICacheProvider<int> IntCacheProvider { get; set; }
 
-    [Inject]
-    internal ICacheProvider<double> DoubleCacheProvider { get; set; }
+    [Inject] internal ICacheProvider<double> DoubleCacheProvider { get; set; }
 
-    [Inject]
-    internal ILogger Logger { get; set; }
+    [Inject] internal ILogger Logger { get; set; }
 
-    [Inject]
-    internal RM2025ucPerformanceSystem PerformanceSystem { get; set; }
+    [Inject] internal RM2025ucPerformanceSystem PerformanceSystem { get; set; }
 
-    [Inject]
-    internal RM2025ucOperatorSystem OperatorSystem { get; set; }
+    [Inject] internal RM2025ucOperatorSystem OperatorSystem { get; set; }
 
-    public Task Reset(CancellationToken cancellation = new CancellationToken())
+    public Task Reset(CancellationToken cancellation = new())
     {
         SetExchangerState(Camp.Red, ExchangerState.Idle);
         SetExchangerState(Camp.Blue, ExchangerState.Idle);
         return Task.CompletedTask;
     }
 
+    [Inject]
+    internal void Inject(Router router)
+    {
+        MapTo(router);
+    }
+
     /// <summary>
-    /// 获取兑换站当前状态
+    ///     获取兑换站当前状态
     /// </summary>
     /// <param name="camp"></param>
     /// <returns></returns>
@@ -108,7 +100,7 @@ public sealed partial class ExchangerSystem : ISystem
         {
             Camp.Red => RedExchangeZoneId,
             Camp.Blue => BlueExchangeZoneId,
-            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null)
         };
 
         return ByteCacheProvider
@@ -128,7 +120,7 @@ public sealed partial class ExchangerSystem : ISystem
         {
             Camp.Red => RedExchangeZoneId,
             Camp.Blue => BlueExchangeZoneId,
-            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null)
         };
 
         ByteCacheProvider.WithWriterNamespace(id).Save(ExchangerStateCacheKey, (byte)state);
@@ -137,16 +129,15 @@ public sealed partial class ExchangerSystem : ISystem
     }
 
     /// <summary>
-    /// 获取当前可用的兑换难度
-    ///
-    /// 累计通过兑换获得的金币对当次兑换获得金币的影响
-    /// 随着通过矿石兑换所获得的累计经济的增加，参赛队伍可选择的最低难度等级将逐渐被限制，但此后兑
+    ///     获取当前可用的兑换难度
+    ///     累计通过兑换获得的金币对当次兑换获得金币的影响
+    ///     随着通过矿石兑换所获得的累计经济的增加，参赛队伍可选择的最低难度等级将逐渐被限制，但此后兑
     ///     换的每个矿石所获得的金币将乘以一定的倍率，具体机制如下：
-    /// 表 5-14 累计经济与难度限制
-    /// 累计金币数 难度限制 金币倍率
-    /// 1075 最低选择二级 1 倍
-    /// 1225 最低选择三级 1.4 倍
-    /// 2000 最低选择四级 2 倍
+    ///     表 5-14 累计经济与难度限制
+    ///     累计金币数 难度限制 金币倍率
+    ///     1075 最低选择二级 1 倍
+    ///     1225 最低选择三级 1.4 倍
+    ///     2000 最低选择四级 2 倍
     /// </summary>
     /// <param name="camp"></param>
     /// <returns></returns>
@@ -158,12 +149,12 @@ public sealed partial class ExchangerSystem : ISystem
             < 1075 => AvailableLevelsL1,
             < 1225 => AvailableLevelsL2,
             < 2000 => AvailableLevelsL3,
-            _ => AvailableLevelsL4,
+            _ => AvailableLevelsL4
         };
     }
 
     /// <summary>
-    /// 当前兑换站设置等级
+    ///     当前兑换站设置等级
     /// </summary>
     /// <param name="camp"></param>
     /// <returns></returns>
@@ -174,7 +165,7 @@ public sealed partial class ExchangerSystem : ISystem
         {
             Camp.Red => RedExchangeZoneId,
             Camp.Blue => BlueExchangeZoneId,
-            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null)
         };
 
         return IntCacheProvider.WithReaderNamespace(id).Load(ExchangerLevelCacheKey);
@@ -186,14 +177,14 @@ public sealed partial class ExchangerSystem : ISystem
         {
             Camp.Red => RedExchangeZoneId,
             Camp.Blue => BlueExchangeZoneId,
-            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null)
         };
 
         IntCacheProvider.WithWriterNamespace(id).Save(ExchangerLevelCacheKey, level);
     }
 
     /// <summary>
-    /// 上次兑换开始时间
+    ///     上次兑换开始时间
     /// </summary>
     /// <param name="camp"></param>
     /// <returns></returns>
@@ -204,7 +195,7 @@ public sealed partial class ExchangerSystem : ISystem
         {
             Camp.Red => RedExchangeZoneId,
             Camp.Blue => BlueExchangeZoneId,
-            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null)
         };
 
         return DoubleCacheProvider
@@ -220,14 +211,14 @@ public sealed partial class ExchangerSystem : ISystem
         {
             Camp.Red => RedExchangeZoneId,
             Camp.Blue => BlueExchangeZoneId,
-            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null)
         };
 
         DoubleCacheProvider.WithWriterNamespace(id).Save(ExchangerStartTimeCacheKey, time);
     }
 
     /// <summary>
-    /// 上次兑换结束时间
+    ///     上次兑换结束时间
     /// </summary>
     /// <param name="camp"></param>
     /// <returns></returns>
@@ -238,7 +229,7 @@ public sealed partial class ExchangerSystem : ISystem
         {
             Camp.Red => RedExchangeZoneId,
             Camp.Blue => BlueExchangeZoneId,
-            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null)
         };
 
         return DoubleCacheProvider
@@ -249,7 +240,7 @@ public sealed partial class ExchangerSystem : ISystem
     }
 
     /// <summary>
-    /// 获取累计兑换金币数量
+    ///     获取累计兑换金币数量
     /// </summary>
     /// <param name="camp"></param>
     /// <returns></returns>
@@ -259,7 +250,7 @@ public sealed partial class ExchangerSystem : ISystem
         {
             Camp.Red => RedExchangeZoneId,
             Camp.Blue => BlueExchangeZoneId,
-            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null)
         };
 
         return IntCacheProvider
@@ -275,7 +266,7 @@ public sealed partial class ExchangerSystem : ISystem
         {
             Camp.Red => RedExchangeZoneId,
             Camp.Blue => BlueExchangeZoneId,
-            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null)
         };
 
         IntCacheProvider.WithWriterNamespace(id).Save(ExchangerSumCoinCacheKey, sum);
@@ -287,16 +278,15 @@ public sealed partial class ExchangerSystem : ISystem
         {
             Camp.Red => RedExchangeZoneId,
             Camp.Blue => BlueExchangeZoneId,
-            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null)
         };
 
         DoubleCacheProvider.WithWriterNamespace(id).Save(ExchangerEndTimeCacheKey, time);
     }
 
     /// <summary>
-    /// 选择难度，开始兑换
-    ///
-    /// 由工程机器人调用
+    ///     选择难度，开始兑换
+    ///     由工程机器人调用
     /// </summary>
     /// <param name="camp"></param>
     /// <param name="level"></param>
@@ -325,9 +315,8 @@ public sealed partial class ExchangerSystem : ISystem
     }
 
     /// <summary>
-    /// 兑换站姿态调整完成
-    ///
-    /// 由兑换站调用
+    ///     兑换站姿态调整完成
+    ///     由兑换站调用
     /// </summary>
     /// <param name="camp"></param>
     public void OnExchangerAdjustFinished(Camp camp)
@@ -349,9 +338,8 @@ public sealed partial class ExchangerSystem : ISystem
     }
 
     /// <summary>
-    /// 兑换站确认兑换
-    ///
-    /// 由兑换站调用
+    ///     兑换站确认兑换
+    ///     由兑换站调用
     /// </summary>
     /// <param name="camp"></param>
     public void OnExchangerConfirmExchange(Camp camp)
@@ -367,9 +355,8 @@ public sealed partial class ExchangerSystem : ISystem
     }
 
     /// <summary>
-    /// 兑换站成功识别矿石（清矿完成）
-    ///
-    /// 由兑换站调用
+    ///     兑换站成功识别矿石（清矿完成）
+    ///     由兑换站调用
     /// </summary>
     /// <param name="camp"></param>
     /// <param name="type"></param>
@@ -385,16 +372,13 @@ public sealed partial class ExchangerSystem : ISystem
         {
             Camp.Red => Identity.RedEngineer,
             Camp.Blue => Identity.BlueEngineer,
-            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null)
         };
 
         var startTime = GetExchangeStartTime(camp);
         var endTime = GetExchangeEndTime(camp);
 
-        if (startTime > endTime)
-        {
-            throw new InvalidOperationException("Invalid exchange time");
-        }
+        if (startTime > endTime) throw new InvalidOperationException("Invalid exchange time");
 
         var level = GetExchangerLevel(camp);
         var duration = endTime - startTime;
@@ -415,26 +399,24 @@ public sealed partial class ExchangerSystem : ISystem
                 multiplier
             )
         );
-        
+
         EconomySystem.AddCoin(camp, gain);
     }
 
     /// <summary>
-    /// 计算兑换获得金币
-    ///
-    /// 定义 A 为机器人此次兑换的基础金币数， B 为机器人兑换的该类型矿石上一级别难度对应的基础金币
-    /// 数， t 为兑换用时， m 为工程机器人随矿石兑换所获得的累计经济添加的倍率， n 为工程机器人控制方式
-    /// 所添加的倍率，每次兑换后，机器人获得的实际金币值为：
-    ///  一级难度： A*m*n
-    ///  二级与三级难度：
-    ///  A*m*n (t≤15)
+    ///     计算兑换获得金币
+    ///     定义 A 为机器人此次兑换的基础金币数， B 为机器人兑换的该类型矿石上一级别难度对应的基础金币
+    ///     数， t 为兑换用时， m 为工程机器人随矿石兑换所获得的累计经济添加的倍率， n 为工程机器人控制方式
+    ///     所添加的倍率，每次兑换后，机器人获得的实际金币值为：
+    ///      一级难度： A*m*n
+    ///      二级与三级难度：
+    ///      A*m*n (t≤15)
     ///      (A-0.02*(t-15)*(A-B))*m*n， (t>15)
-    ///  四级难度：
-    ///  A1*m1*n+A2*m2*n (∑ t≤20)
-    ///  0 (∑ t>20)
-    ///
-    /// 若工程机器人正处于自动兑矿操作方式，通过兑换矿石获得的经济提升 50%；若工程机器人正处于半自
-    /// 动控制操作方式， 通过兑换矿石获得的经济提升 100%， 该值计算方式为独立乘算。
+    ///      四级难度：
+    ///      A1*m1*n+A2*m2*n (∑ t≤20)
+    ///      0 (∑ t>20)
+    ///     若工程机器人正处于自动兑矿操作方式，通过兑换矿石获得的经济提升 50%；若工程机器人正处于半自
+    ///     动控制操作方式， 通过兑换矿石获得的经济提升 100%， 该值计算方式为独立乘算。
     /// </summary>
     /// <returns></returns>
     public int GetExchangeGain(Camp camp, int level, OreType oreType, double t)
@@ -443,7 +425,7 @@ public sealed partial class ExchangerSystem : ISystem
         {
             Camp.Red => Identity.RedEngineer,
             Camp.Blue => Identity.BlueEngineer,
-            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null)
         };
 
         var controlMode = OperatorSystem.GetControlMode(engineerId);
@@ -455,7 +437,7 @@ public sealed partial class ExchangerSystem : ISystem
         {
             ControlMode.SemiAuto => 2,
             ControlMode.AutoExchange => 1.5,
-            _ => 1,
+            _ => 1
         };
 
         if (t <= 0)
@@ -484,12 +466,12 @@ public sealed partial class ExchangerSystem : ISystem
             1 => 40,
             2 or 3 => 65,
             4 => 20,
-            _ => 0,
+            _ => 0
         };
     }
 
     /// <summary>
-    /// 累计通过兑换获得的金币对当次兑换获得金币的影响
+    ///     累计通过兑换获得的金币对当次兑换获得金币的影响
     /// </summary>
     /// <param name="camp"></param>
     /// <returns></returns>
@@ -500,7 +482,7 @@ public sealed partial class ExchangerSystem : ISystem
         {
             < 1075 => 1,
             < 1225 => 1.4f,
-            _ => 2,
+            _ => 2
         };
     }
 
@@ -575,7 +557,7 @@ public readonly struct ExchangerPosition
     }
 
     /// <summary>
-    /// 随机生成姿态
+    ///     随机生成姿态
     /// </summary>
     /// <param name="xRange"></param>
     /// <param name="yRange"></param>
@@ -613,8 +595,8 @@ public readonly struct ExchangerPosition
     }
 
     /// <summary>
-    /// 位姿满足条件:
-    /// x^2 + y^2 + (z-600)^2 <= 300^2
+    ///     位姿满足条件:
+    ///     x^2 + y^2 + (z-600)^2 <= 300^2
     /// </summary>
     /// <returns></returns>
     private bool PositionLegal()
@@ -631,40 +613,40 @@ public readonly struct ExchangerPosition
 public enum OreType : byte
 {
     Gold,
-    Silver,
+    Silver
 }
 
 public enum ExchangerState : byte
 {
     /// <summary>
-    /// 空闲
+    ///     空闲
     /// </summary>
     Idle,
 
     /// <summary>
-    /// 兑换中
+    ///     兑换中
     /// </summary>
     Exchanging,
 
     /// <summary>
-    /// 清矿中
+    ///     清矿中
     /// </summary>
     Pruning,
 
     /// <summary>
-    /// 前往兑矿点
+    ///     前往兑矿点
     /// </summary>
     AdjustToExchange,
 
     /// <summary>
-    /// 前往复位点
+    ///     前往复位点
     /// </summary>
     AdjustToReset,
 
     /// <summary>
-    /// 前往清矿点
+    ///     前往清矿点
     /// </summary>
-    AdjustToPrune,
+    AdjustToPrune
 }
 
 public static class ExchangerStateExtensions

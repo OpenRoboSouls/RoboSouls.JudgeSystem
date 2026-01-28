@@ -11,25 +11,19 @@ using VitalRouter;
 namespace RoboSouls.JudgeSystem.RoboMaster2025UL.Systems;
 
 /// <summary>
-/// 结算系统
-/// 1. 一方的基地被击毁时， 当局比赛立即结束， 基地存活的一方获胜。
-/// 2. 一局比赛时间耗尽时，双方基地均未被击毁，基地剩余血量高的一方获胜。
-/// 3. 一局比赛时间耗尽时， 双方基地剩余血量一致， 哨兵机器人剩余血量高的一方获胜。
-/// 4. 一局比赛时间耗尽时， 双方基地剩余血量一致且哨兵机器人剩余血量一致，全队攻击伤害高的一方获
-/// 胜。
-/// 5. 一局比赛时间耗尽时，双方基地剩余血量一致且哨兵机器人剩余血量一致、全队攻击伤害一致，则全
-/// 队机器人总剩余血量高的一方获胜。
-/// 6. 若上述条件无法判定胜利， 该局比赛视为平局。淘汰赛出现平局则立即加赛一局直至分出胜负。
+///     结算系统
+///     1. 一方的基地被击毁时， 当局比赛立即结束， 基地存活的一方获胜。
+///     2. 一局比赛时间耗尽时，双方基地均未被击毁，基地剩余血量高的一方获胜。
+///     3. 一局比赛时间耗尽时， 双方基地剩余血量一致， 哨兵机器人剩余血量高的一方获胜。
+///     4. 一局比赛时间耗尽时， 双方基地剩余血量一致且哨兵机器人剩余血量一致，全队攻击伤害高的一方获
+///     胜。
+///     5. 一局比赛时间耗尽时，双方基地剩余血量一致且哨兵机器人剩余血量一致、全队攻击伤害一致，则全
+///     队机器人总剩余血量高的一方获胜。
+///     6. 若上述条件无法判定胜利， 该局比赛视为平局。淘汰赛出现平局则立即加赛一局直至分出胜负。
 /// </summary>
 [Routes]
 public sealed partial class SettlementSystem : ISystem
 {
-    [Inject]
-    internal void Inject(Router router)
-    {
-        MapTo(router);
-    }
-
     public const byte ReasonWinPoint = 1;
     public const byte ReasonTimeWinPoint = 2;
     public const byte ReasonTimeOutTeamDamage = 4;
@@ -39,34 +33,32 @@ public sealed partial class SettlementSystem : ISystem
 
     private bool _currentRoundSettled;
 
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
+    [Inject] internal ITimeSystem TimeSystem { get; set; }
 
-    [Inject]
-    internal ICommandPublisher Publisher { get; set; }
+    [Inject] internal ICommandPublisher Publisher { get; set; }
 
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
+    [Inject] internal EntitySystem EntitySystem { get; set; }
 
-    [Inject]
-    internal BattleSystem BattleSystem { get; set; }
+    [Inject] internal BattleSystem BattleSystem { get; set; }
 
-    [Inject]
-    internal WinPointSystem WinPointSystem { get; set; }
+    [Inject] internal WinPointSystem WinPointSystem { get; set; }
 
-    public Task Reset(CancellationToken cancellation = new CancellationToken())
+    public Task Reset(CancellationToken cancellation = new())
     {
         _currentRoundSettled = false;
 
         return Task.CompletedTask;
     }
 
+    [Inject]
+    internal void Inject(Router router)
+    {
+        MapTo(router);
+    }
+
     private void OnMatchSettle(Camp winner, byte reason)
     {
-        if (_currentRoundSettled)
-        {
-            return;
-        }
+        if (_currentRoundSettled) return;
 
         _currentRoundSettled = true;
 
@@ -82,14 +74,11 @@ public sealed partial class SettlementSystem : ISystem
         if (_currentRoundSettled)
             return;
 
-        if (evt.NewWinPoint >= RM2025ulPerformanceSystem.RequiredWinPoint)
-        {
-            OnMatchSettle(evt.Camp, ReasonWinPoint);
-        }
+        if (evt.NewWinPoint >= RM2025ulPerformanceSystem.RequiredWinPoint) OnMatchSettle(evt.Camp, ReasonWinPoint);
     }
 
     /// <summary>
-    /// 时间耗尽结算
+    ///     时间耗尽结算
     /// </summary>
     /// <param name="evt"></param>
     [Route]

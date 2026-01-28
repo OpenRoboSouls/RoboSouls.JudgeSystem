@@ -10,18 +10,18 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="VitalRouter" Version="2.0.4" />
+        <PackageReference Include="VitalRouter" Version="2.0.4"/>
     </ItemGroup>
 
     <ItemGroup>
-      <Reference Include="VContainer">
-        <HintPath>..\Lib\VContainer.dll</HintPath>
-          <Private>false</Private>
-      </Reference>
-      <Reference Include="VContainer.SourceGenerator">
-        <HintPath>..\Lib\VContainer.SourceGenerator.dll</HintPath>
-          <Private>false</Private>
-      </Reference>
+        <Reference Include="VContainer">
+            <HintPath>..\Lib\VContainer.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="VContainer.SourceGenerator">
+            <HintPath>..\Lib\VContainer.SourceGenerator.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
     </ItemGroup>
 
 </Project>

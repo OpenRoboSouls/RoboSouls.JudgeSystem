@@ -13,17 +13,15 @@ public class Outpost : IBuilding, IHealthed
         Id = id;
     }
 
-    [Inject]
-    internal ICacheReader<uint> UintCacheBox { get; set; }
+    [Inject] internal ICacheReader<uint> UintCacheBox { get; set; }
 
-    [Inject]
-    internal ICacheReader<bool> BoolCacheBox { get; set; }
+    [Inject] internal ICacheReader<bool> BoolCacheBox { get; set; }
 
-    [Inject]
-    internal ICacheProvider<float> FloatCacheBox { get; set; }
+    [Inject] internal ICacheProvider<float> FloatCacheBox { get; set; }
 
     public bool IsRotateClockwise =>
         BoolCacheBox.WithReaderNamespace(Id).Load(RotateClockwiseCacheKey);
+
     public float RotateSpeed => FloatCacheBox.WithReaderNamespace(Id).Load(RotateSpeedCacheKey);
 
     public Identity Id { get; }

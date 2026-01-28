@@ -6,7 +6,7 @@ using VitalRouter;
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 
 /// <summary>
-/// 地形跨越点机制
+///     地形跨越点机制
 /// </summary>
 public abstract class TerrainLeapZoneSystem(
     ITimeSystem timeSystem,
@@ -17,22 +17,22 @@ public abstract class TerrainLeapZoneSystem(
     private static readonly int ActivationTimeKey = "activation_time".Sum();
 
     /// <summary>
-    /// 触发区域ID，机器人进入此区域时开始跨越判定
+    ///     触发区域ID，机器人进入此区域时开始跨越判定
     /// </summary>
     public abstract Identity TriggerZoneId { get; }
 
     /// <summary>
-    /// 激活区域ID，机器人在此区域内完成跨越判定
+    ///     激活区域ID，机器人在此区域内完成跨越判定
     /// </summary>
     public abstract Identity ActivationZoneId { get; }
 
     /// <summary>
-    /// 激活判定最大时间
+    ///     激活判定最大时间
     /// </summary>
     public abstract int MaxActivationTime { get; }
 
     /// <summary>
-    /// 增益持续时间
+    ///     增益持续时间
     /// </summary>
     public abstract int BuffDuration { get; }
 
@@ -42,14 +42,12 @@ public abstract class TerrainLeapZoneSystem(
     {
         // 在机器人已有任意地形跨越增益时，再一次获得地形跨越增益，机器人将获得 50%的防御增益
         if (buffSystem.TryGetBuff(operatorId, RM2026ucBuffs.TerrainLeapBuff, out Buff _))
-        {
             buffSystem.AddBuff(
                 operatorId,
                 Buffs.DefenceBuff,
                 0.5f,
                 TimeSpan.FromSeconds(BuffDuration)
             );
-        }
 
         buffSystem.AddBuff(
             operatorId,
@@ -71,10 +69,7 @@ public abstract class TerrainLeapZoneSystem(
         {
             var activationTime =
                 timeSystem.StageTimeElapsed - GetActivationTime(evt.OperatorId);
-            if (activationTime <= MaxActivationTime)
-            {
-                OnActivationSuccess(evt.OperatorId, activationTime);
-            }
+            if (activationTime <= MaxActivationTime) OnActivationSuccess(evt.OperatorId, activationTime);
         }
     }
 

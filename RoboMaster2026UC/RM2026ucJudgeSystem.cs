@@ -142,7 +142,7 @@ public sealed class RM2026ucJudgeSystem(
         builder.Register<PenaltyDamageSystem>(Lifetime.Scoped).As<ISystem>().AsSelf();
     }
 
-    public override async Task StartAsync(CancellationToken cancellation = new CancellationToken())
+    public override async Task StartAsync(CancellationToken cancellation = new())
     {
         await base.StartAsync(cancellation);
 
@@ -153,7 +153,7 @@ public sealed class RM2026ucJudgeSystem(
     }
 
     public override async Task Reset(
-        CancellationToken cancellation = new CancellationToken()
+        CancellationToken cancellation = new()
     )
     {
         await base.Reset(cancellation);

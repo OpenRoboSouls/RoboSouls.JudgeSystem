@@ -5,7 +5,7 @@ namespace RoboSouls.JudgeSystem.Systems;
 
 public interface ISystem
 {
-    public Task Reset(CancellationToken cancellation = new CancellationToken())
+    public Task Reset(CancellationToken cancellation = new())
     {
         return Task.CompletedTask;
     }

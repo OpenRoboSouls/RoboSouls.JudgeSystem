@@ -11,25 +11,19 @@ using VitalRouter;
 namespace RoboSouls.JudgeSystem.RoboMaster2025UC.Systems;
 
 /// <summary>
-/// 结算系统
-/// 1. 一局比赛时间耗尽或一方基地被击毁时，基地剩余血量高的一方获胜。
-/// 2. 一局比赛时间耗尽时，若双方基地剩余血量一致，前哨站剩余血量高的一方获胜。
-/// 3. 一局比赛时间耗尽时，若双方基地剩余血量一致，前哨站血量一致或均被击毁， 全队攻击伤害高的一
-/// 方获胜。
-/// 4. 一局比赛时间耗尽时，若双方基地剩余血量一致， 前哨站血量一致或均被击毁， 全队攻击伤害一致，
-/// 全队总剩余血量高的一方获胜
-/// 5. 若上述条件无法判定胜负，该局比赛视为平局。在 BO3 和 BO5 的对局中，出现平局则立即加赛一局，
-/// 直至分出胜负。
+///     结算系统
+///     1. 一局比赛时间耗尽或一方基地被击毁时，基地剩余血量高的一方获胜。
+///     2. 一局比赛时间耗尽时，若双方基地剩余血量一致，前哨站剩余血量高的一方获胜。
+///     3. 一局比赛时间耗尽时，若双方基地剩余血量一致，前哨站血量一致或均被击毁， 全队攻击伤害高的一
+///     方获胜。
+///     4. 一局比赛时间耗尽时，若双方基地剩余血量一致， 前哨站血量一致或均被击毁， 全队攻击伤害一致，
+///     全队总剩余血量高的一方获胜
+///     5. 若上述条件无法判定胜负，该局比赛视为平局。在 BO3 和 BO5 的对局中，出现平局则立即加赛一局，
+///     直至分出胜负。
 /// </summary>
 [Routes]
 public sealed partial class SettlementSystem : ISystem
 {
-    [Inject]
-    internal void Inject(Router router)
-    {
-        MapTo(router);
-    }
-
     public const byte ReasonBaseDestroyed = 1;
     public const byte ReasonTimeOutBaseHp = 2;
     public const byte ReasonTimeOutOutpostHp = 3;
@@ -40,31 +34,30 @@ public sealed partial class SettlementSystem : ISystem
 
     private bool _currentRoundSettled;
 
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
+    [Inject] internal ITimeSystem TimeSystem { get; set; }
 
-    [Inject]
-    internal ICommandPublisher Publisher { get; set; }
+    [Inject] internal ICommandPublisher Publisher { get; set; }
 
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
+    [Inject] internal EntitySystem EntitySystem { get; set; }
 
-    [Inject]
-    internal BattleSystem BattleSystem { get; set; }
+    [Inject] internal BattleSystem BattleSystem { get; set; }
 
-    public Task Reset(CancellationToken cancellation = new CancellationToken())
+    public Task Reset(CancellationToken cancellation = new())
     {
         _currentRoundSettled = false;
 
         return Task.CompletedTask;
     }
 
+    [Inject]
+    internal void Inject(Router router)
+    {
+        MapTo(router);
+    }
+
     private void OnMatchSettle(Camp winner, byte reason)
     {
-        if (_currentRoundSettled)
-        {
-            return;
-        }
+        if (_currentRoundSettled) return;
 
         _currentRoundSettled = true;
 
@@ -73,7 +66,7 @@ public sealed partial class SettlementSystem : ISystem
     }
 
     /// <summary>
-    /// 时间耗尽结算
+    ///     时间耗尽结算
     /// </summary>
     /// <param name="evt"></param>
     [Route]
@@ -158,7 +151,7 @@ public sealed partial class SettlementSystem : ISystem
     }
 
     /// <summary>
-    /// 裁判终止比赛
+    ///     裁判终止比赛
     /// </summary>
     public void JudgeTerminate()
     {
@@ -171,7 +164,7 @@ public sealed partial class SettlementSystem : ISystem
     }
 
     /// <summary>
-    /// 基地击毁计算
+    ///     基地击毁计算
     /// </summary>
     /// <param name="evt"></param>
     [Route]
@@ -182,12 +175,7 @@ public sealed partial class SettlementSystem : ISystem
         if (_currentRoundSettled)
             return;
         if (evt.Victim == Identity.RedBase)
-        {
             OnMatchSettle(Camp.Blue, ReasonBaseDestroyed);
-        }
-        else if (evt.Victim == Identity.BlueBase)
-        {
-            OnMatchSettle(Camp.Red, ReasonBaseDestroyed);
-        }
+        else if (evt.Victim == Identity.BlueBase) OnMatchSettle(Camp.Red, ReasonBaseDestroyed);
     }
 }

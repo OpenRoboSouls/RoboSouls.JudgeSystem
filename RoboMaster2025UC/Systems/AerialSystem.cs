@@ -10,57 +10,48 @@ using VitalRouter;
 namespace RoboSouls.JudgeSystem.RoboMaster2025UC.Systems;
 
 /// <summary>
-/// 空中机器人机制
-///
-/// 比赛开始时，空中机器人拥有 30 秒空中支援时间，随后每 1 分钟获得额外 20 秒空中支援时间。
-/// 云台手可以通过裁判系统选手端呼叫或暂停空中支援。 在空中支援时间内，空中机器人将获得第一视角画
-/// 面，同时空中机器人与停机坪不接触时，可发射弹丸。在七分钟比赛阶段，空中机器人不能从任何途径获
-/// 取弹丸。 空中支援期间，机器人发射机构解锁，反之锁定。
-/// 在空中支援时间耗尽后，若云台手未暂停空中支援，此后每秒额外的空中支援时间都将消耗 1 金币， 详见
-/// “表 5-8 兑换规则” 。
-/// 每局比赛中，空中机器人拥有 1500 发允许发弹量
+///     空中机器人机制
+///     比赛开始时，空中机器人拥有 30 秒空中支援时间，随后每 1 分钟获得额外 20 秒空中支援时间。
+///     云台手可以通过裁判系统选手端呼叫或暂停空中支援。 在空中支援时间内，空中机器人将获得第一视角画
+///     面，同时空中机器人与停机坪不接触时，可发射弹丸。在七分钟比赛阶段，空中机器人不能从任何途径获
+///     取弹丸。 空中支援期间，机器人发射机构解锁，反之锁定。
+///     在空中支援时间耗尽后，若云台手未暂停空中支援，此后每秒额外的空中支援时间都将消耗 1 金币， 详见
+///     “表 5-8 兑换规则” 。
+///     每局比赛中，空中机器人拥有 1500 发允许发弹量
 /// </summary>
 public sealed class AerialSystem : ISystem
 {
     public const int AerialAmmoAllowance = 1500;
 
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
+    private static readonly int AirstrikeStartTimeCacheKey = "airstrike_start_time".Sum();
+    private static readonly int AirstrikeStopTimeCacheKey = "airstrike_stop_time".Sum();
 
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
+    [Inject] internal EntitySystem EntitySystem { get; set; }
 
-    [Inject]
-    internal ICacheWriter<bool> BoolCacheBoxWriter { get; set; }
+    [Inject] internal ITimeSystem TimeSystem { get; set; }
 
-    [Inject]
-    internal ICacheWriter<float> FloatCacheBoxWriter { get; set; }
+    [Inject] internal ICacheWriter<bool> BoolCacheBoxWriter { get; set; }
 
-    [Inject]
-    internal ICacheProvider<double> DoubleCache { get; set; }
+    [Inject] internal ICacheWriter<float> FloatCacheBoxWriter { get; set; }
 
-    [Inject]
-    internal ICommandPublisher Publisher { get; set; }
+    [Inject] internal ICacheProvider<double> DoubleCache { get; set; }
 
-    [Inject]
-    internal EconomySystem EconomySystem { get; set; }
+    [Inject] internal ICommandPublisher Publisher { get; set; }
 
-    [Inject]
-    internal BattleSystem BattleSystem { get; set; }
+    [Inject] internal EconomySystem EconomySystem { get; set; }
 
-    [Inject]
-    internal ModuleSystem ModuleSystem { get; set; }
+    [Inject] internal BattleSystem BattleSystem { get; set; }
 
-    public Task Reset(CancellationToken cancellation = new CancellationToken())
+    [Inject] internal ModuleSystem ModuleSystem { get; set; }
+
+    public Task Reset(CancellationToken cancellation = new())
     {
         TimeSystem.RegisterRepeatAction(
             1,
             () =>
             {
                 if (EntitySystem.TryGetOperatedEntity(Identity.RedAerial, out Aerial redAerial))
-                {
                     return AirStrikeTimeSettlement(redAerial);
-                }
 
                 return Task.CompletedTask;
             }
@@ -76,9 +67,7 @@ public sealed class AerialSystem : ISystem
                         out Aerial blueAerial
                     )
                 )
-                {
                     return AirStrikeTimeSettlement(blueAerial);
-                }
 
                 return Task.CompletedTask;
             }
@@ -132,7 +121,7 @@ public sealed class AerialSystem : ISystem
     }
 
     /// <summary>
-    /// 呼叫空中支援
+    ///     呼叫空中支援
     /// </summary>
     /// <param name="camp"></param>
     public void StartAirStrike(Camp camp)
@@ -141,7 +130,7 @@ public sealed class AerialSystem : ISystem
         {
             Camp.Red => Identity.RedAerial,
             Camp.Blue => Identity.BlueAerial,
-            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null)
         };
 
         if (!EntitySystem.TryGetOperatedEntity(aerialId, out Aerial aerial))
@@ -159,7 +148,7 @@ public sealed class AerialSystem : ISystem
         {
             Camp.Red => Identity.RedAerial,
             Camp.Blue => Identity.BlueAerial,
-            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null)
         };
 
         if (!EntitySystem.TryGetOperatedEntity(aerialId, out Aerial aerial))
@@ -201,7 +190,7 @@ public sealed class AerialSystem : ISystem
             >= 0 and <= 15 => 15,
             > 15 and <= 25 => 25,
             > 25 and <= 35 => 35,
-            > 35 => 45,
+            > 35 => 45
         };
     }
 
@@ -220,9 +209,6 @@ public sealed class AerialSystem : ISystem
         cooldownRemaining = cooldownRequired - cooldownElapsed;
         return cooldownRemaining > 0;
     }
-
-    private static readonly int AirstrikeStartTimeCacheKey = "airstrike_start_time".Sum();
-    private static readonly int AirstrikeStopTimeCacheKey = "airstrike_stop_time".Sum();
 
     public double GetAirStrikeStartTime(in Identity id)
     {
@@ -258,7 +244,7 @@ public sealed class AerialSystem : ISystem
     }
 
     /// <summary>
-    /// 空中支援时间结算
+    ///     空中支援时间结算
     /// </summary>
     /// <param name="aerial"></param>
     /// <returns></returns>
@@ -271,9 +257,7 @@ public sealed class AerialSystem : ISystem
             TimeSystem.Time - GetAirStrikeStartTime(aerial.Id)
             >= RM2025ucPerformanceSystem.MaxAerialStrikeTime
         )
-        {
             StopAirStrike(aerial.Id.Camp);
-        }
 
         if (aerial.AirStrikeTimeRemaining > 0)
         {
@@ -281,10 +265,7 @@ public sealed class AerialSystem : ISystem
         }
         else
         {
-            if (!EconomySystem.TryDecreaseCoin(aerial.Id.Camp, 1))
-            {
-                StopAirStrike(aerial.Id.Camp);
-            }
+            if (!EconomySystem.TryDecreaseCoin(aerial.Id.Camp, 1)) StopAirStrike(aerial.Id.Camp);
         }
 
         return Task.CompletedTask;

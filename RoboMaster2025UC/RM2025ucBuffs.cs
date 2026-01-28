@@ -13,12 +13,12 @@ public static class RM2025ucBuffs
     public static readonly int HeroDeploymentModeBuff = "hero_deployment_mode".Sum();
 
     /// <summary>
-    /// 热量超限导致的发射机构锁定
+    ///     热量超限导致的发射机构锁定
     /// </summary>
     public static readonly int HeatGunLocked = "head_gun_locked".Sum();
 
     /// <summary>
-    /// 易伤
+    ///     易伤
     /// </summary>
     public static readonly int Vulnerable = "vulnerable".Sum();
 }

@@ -11,27 +11,23 @@ namespace RoboSouls.JudgeSystem.RoboMaster2025UC.Systems;
 [Routes]
 public sealed partial class PenaltyDamageSystem : ISystem
 {
+    [Inject] internal ITimeSystem TimeSystem { get; set; }
+
+    [Inject] internal LifeSystem LifeSystem { get; set; }
+
+    [Inject] internal EntitySystem EntitySystem { get; set; }
+
+    [Inject] internal PerformanceSystemBase PerformanceSystem { get; set; }
+
     [Inject]
     internal void Inject(Router router)
     {
         MapTo(router);
     }
 
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
-
-    [Inject]
-    internal LifeSystem LifeSystem { get; set; }
-
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
-
-    [Inject]
-    internal PerformanceSystemBase PerformanceSystem { get; set; }
-
     /// <summary>
-    /// 裁判系统自动扣除违规机器人当前上限血量的 15%，其余存活机器人被扣
-    /// 除当前上限血量的 5%。 机器人每次收到黄牌警告后的 30 秒内，若再次收
+    ///     裁判系统自动扣除违规机器人当前上限血量的 15%，其余存活机器人被扣
+    ///     除当前上限血量的 5%。 机器人每次收到黄牌警告后的 30 秒内，若再次收
     ///     到黄牌警告，则扣除当前上限血量的百分比是前一次的 2 倍，其余存活机
     ///     器人被扣除当前上限血量的 5%。
     /// </summary>

@@ -7,22 +7,21 @@ using VitalRouter;
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 
 /// <summary>
-/// 梯形高地增益点机制
-///
-/// 若一方的梯形高地增益点被该方机器人占领，占领梯形高地增益点的机器人在比赛开始 2-3 分钟、 3-5 分
-/// 钟、 5-7 分钟时分别可获得 2、 3、 5 倍射击热量冷却增益和 25%防御增益。
+///     梯形高地增益点机制
+///     若一方的梯形高地增益点被该方机器人占领，占领梯形高地增益点的机器人在比赛开始 2-3 分钟、 3-5 分
+///     钟、 5-7 分钟时分别可获得 2、 3、 5 倍射击热量冷却增益和 25%防御增益。
 /// </summary>
 [Routes]
 public sealed partial class LadderHighlandSystem(BuffSystem buffSystem, ITimeSystem timeSystem) : ISystem
 {
+    public static readonly Identity RedLadderHighlandZoneId = new(Camp.Red, 80);
+    public static readonly Identity BlueLadderHighlandZoneId = new(Camp.Blue, 80);
+
     [Inject]
     internal void Inject(Router router)
     {
         MapTo(router);
     }
-
-    public static readonly Identity RedLadderHighlandZoneId = new Identity(Camp.Red, 80);
-    public static readonly Identity BlueLadderHighlandZoneId = new Identity(Camp.Blue, 80);
 
     [Route]
     private void OnEnterRedLadderHighlandZone(EnterZoneEvent evt)
@@ -37,7 +36,7 @@ public sealed partial class LadderHighlandSystem(BuffSystem buffSystem, ITimeSys
             >= 120 and < 180 => 2,
             >= 180 and < 300 => 3,
             >= 300 and < 420 => 5,
-            _ => 0,
+            _ => 0
         };
 
         if (cooldownBuffValue <= 0)

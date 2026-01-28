@@ -29,23 +29,27 @@ public sealed class EconomySystem(ICacheProvider<int> economyBox, ILogger Logger
 
     public int BlueCoinCost => BlueTotalCoin - BlueCoin;
 
+    public Task Reset(CancellationToken cancellation = new())
+    {
+        economyBox.Save(RedCoinCacheKey, 0);
+        economyBox.Save(BlueCoinCacheKey, 0);
+        return Task.CompletedTask;
+    }
+
     public int GetCoin(Camp camp)
     {
         return camp switch
         {
             Camp.Red => RedCoin,
             Camp.Blue => BlueCoin,
-            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null)
         };
     }
-        
+
     public void AddCoin(Camp camp, int amount)
     {
-        if (amount < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(amount), amount, null);
-        }
-        
+        if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount), amount, null);
+
         switch (camp)
         {
             case Camp.Red:
@@ -63,25 +67,16 @@ public sealed class EconomySystem(ICacheProvider<int> economyBox, ILogger Logger
 
     public bool TryDecreaseCoin(Camp camp, int amount)
     {
-        if (amount < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(amount), amount, "should not pass negative value");
-        }
-        
+        if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount), amount, "should not pass negative value");
+
         switch (camp)
         {
             case Camp.Red:
-                if (RedCoin < amount)
-                {
-                    return false;
-                }
+                if (RedCoin < amount) return false;
                 economyBox.Save(RedCoinCacheKey, RedCoin - amount);
                 break;
             case Camp.Blue:
-                if (BlueCoin < amount)
-                {
-                    return false;
-                }
+                if (BlueCoin < amount) return false;
                 economyBox.Save(BlueCoinCacheKey, BlueCoin - amount);
                 break;
             default:
@@ -89,12 +84,5 @@ public sealed class EconomySystem(ICacheProvider<int> economyBox, ILogger Logger
         }
 
         return true;
-    }
-
-    public Task Reset(CancellationToken cancellation = new CancellationToken())
-    {
-        economyBox.Save(RedCoinCacheKey, 0);
-        economyBox.Save(BlueCoinCacheKey, 0);
-        return Task.CompletedTask;
     }
 }

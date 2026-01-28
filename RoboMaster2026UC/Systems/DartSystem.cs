@@ -29,26 +29,28 @@ public sealed partial class DartSystem(
     BattleSystem battleSystem)
     : ISystem
 {
-    [Inject]
-    internal void Inject(Router router)
-    {
-        MapTo(router);
-    }
-
-    public static readonly Identity RedDartStationId = new Identity(Camp.Red, 12);
-    public static readonly Identity BlueDartStationId = new Identity(Camp.Blue, 12);
+    public static readonly Identity RedDartStationId = new(Camp.Red, 12);
+    public static readonly Identity BlueDartStationId = new(Camp.Blue, 12);
 
     private static readonly int DartTargetCacheKey = "DartTarget".Sum();
     private static readonly int DartRemainingCacheKey = "DartRemaining".Sum();
+
     private static readonly int LastDartStationOpenTimeCacheKey =
         "LastDartStationOpenTime".Sum();
+
     private static readonly int DartStationOpenedCountCacheKey = "DartStationOpened".Sum();
 
     // client does not need to know
-    private readonly DartCounter _blueDartCounter = new DartCounter();
-    private readonly DartCounter _redDartCounter = new DartCounter();
+    private readonly DartCounter _blueDartCounter = new();
 
-    public Task Reset(CancellationToken cancellation = new CancellationToken())
+    private readonly Dictionary<Identity, bool> _interceptedDarts = new();
+
+    private readonly float _lastFireTime = 0;
+    private readonly DartCounter _redDartCounter = new();
+
+    private ushort _lastDartId;
+
+    public Task Reset(CancellationToken cancellation = new())
     {
         SetCurrentTarget(Camp.Blue, DartTarget.Outpost);
         SetCurrentTarget(Camp.Red, DartTarget.Outpost);
@@ -60,8 +62,14 @@ public sealed partial class DartSystem(
         return Task.CompletedTask;
     }
 
+    [Inject]
+    internal void Inject(Router router)
+    {
+        MapTo(router);
+    }
+
     /// <summary>
-    /// 当前飞镖目标
+    ///     当前飞镖目标
     /// </summary>
     /// <param name="camp"></param>
     /// <returns></returns>
@@ -72,30 +80,28 @@ public sealed partial class DartSystem(
         {
             Camp.Blue => Identity.RedOutpost,
             Camp.Red => Identity.BlueOutpost,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
 
         var dartStationId = camp switch
         {
             Camp.Blue => BlueDartStationId,
             Camp.Red => RedDartStationId,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
 
         if (entitySystem.TryGetEntity<Outpost>(outpostId, out var outpost) && outpost.IsDead())
-        {
             return byteCacheBox
                 .WithReaderNamespace(dartStationId)
                 .TryLoad(DartTargetCacheKey, out var value)
                 ? (DartTarget)value
                 : DartTarget.Fixed;
-        }
 
         return DartTarget.Outpost;
     }
 
     /// <summary>
-    /// 是否可以切换飞镖目标
+    ///     是否可以切换飞镖目标
     /// </summary>
     /// <param name="camp"></param>
     /// <returns></returns>
@@ -137,7 +143,7 @@ public sealed partial class DartSystem(
     }
 
     /// <summary>
-    /// 切换当前飞镖目标
+    ///     切换当前飞镖目标
     /// </summary>
     /// <param name="camp"></param>
     public void SwitchCurrentTarget(Camp camp)
@@ -149,7 +155,7 @@ public sealed partial class DartSystem(
         {
             Camp.Blue => Identity.RedOutpost,
             Camp.Red => Identity.BlueOutpost,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
 
         if (entitySystem.TryGetEntity<Outpost>(outpostId, out var outpost) && outpost.IsDead())
@@ -159,7 +165,7 @@ public sealed partial class DartSystem(
                 DartTarget.Outpost => DartTarget.Fixed,
                 DartTarget.Fixed => DartTarget.RandomFixed,
                 DartTarget.RandomFixed => DartTarget.RandomMoving,
-                DartTarget.RandomMoving => DartTarget.Fixed,
+                DartTarget.RandomMoving => DartTarget.Fixed
             };
 
             SetCurrentTarget(camp, newTarget);
@@ -171,23 +177,20 @@ public sealed partial class DartSystem(
     }
 
     /// <summary>
-    /// 设置当前飞镖目标
+    ///     设置当前飞镖目标
     /// </summary>
     /// <param name="camp"></param>
     /// <param name="target"></param>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
     private void SetCurrentTarget(Camp camp, DartTarget target)
     {
-        if (GetCurrentTarget(camp) == target)
-        {
-            return;
-        }
+        if (GetCurrentTarget(camp) == target) return;
 
         var dartStationId = camp switch
         {
             Camp.Blue => BlueDartStationId,
             Camp.Red => RedDartStationId,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
 
         byteCacheBox.WithWriterNamespace(dartStationId).Save(DartTargetCacheKey, (byte)target);
@@ -196,7 +199,7 @@ public sealed partial class DartSystem(
     }
 
     /// <summary>
-    /// 剩余飞镖数量
+    ///     剩余飞镖数量
     /// </summary>
     /// <param name="camp"></param>
     /// <returns></returns>
@@ -206,7 +209,7 @@ public sealed partial class DartSystem(
         {
             Camp.Blue => BlueDartStationId,
             Camp.Red => RedDartStationId,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
         return intCacheBox
             .WithReaderNamespace(dartStationId)
@@ -221,13 +224,13 @@ public sealed partial class DartSystem(
         {
             Camp.Blue => BlueDartStationId,
             Camp.Red => RedDartStationId,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
         intCacheBox.WithWriterNamespace(dartStationId).Save(DartRemainingCacheKey, value);
     }
 
     /// <summary>
-    /// 上次打开飞镖舱门时间
+    ///     上次打开飞镖舱门时间
     /// </summary>
     /// <param name="camp"></param>
     /// <returns></returns>
@@ -237,15 +240,12 @@ public sealed partial class DartSystem(
         {
             Camp.Blue => BlueDartStationId,
             Camp.Red => RedDartStationId,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
         var v = doubleCacheBox
             .WithReaderNamespace(dartStationId)
             .Load(LastDartStationOpenTimeCacheKey);
-        if (v <= 0)
-        {
-            v = double.MinValue;
-        }
+        if (v <= 0) v = double.MinValue;
 
         return v;
     }
@@ -256,7 +256,7 @@ public sealed partial class DartSystem(
         {
             Camp.Blue => BlueDartStationId,
             Camp.Red => RedDartStationId,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
         doubleCacheBox
             .WithWriterNamespace(dartStationId)
@@ -269,7 +269,7 @@ public sealed partial class DartSystem(
         {
             Camp.Red => RedDartStationId,
             Camp.Blue => BlueDartStationId,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
 
         return intCacheBox.WithReaderNamespace(id).Load(DartStationOpenedCountCacheKey);
@@ -281,14 +281,14 @@ public sealed partial class DartSystem(
         {
             Camp.Red => RedDartStationId,
             Camp.Blue => BlueDartStationId,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
 
         intCacheBox.WithWriterNamespace(id).Save(DartStationOpenedCountCacheKey, value);
     }
 
     /// <summary>
-    /// 飞镖发射站闸门有 2 次开启机会，比赛开始 30 秒后和比赛开始4 分钟后各 1 次
+    ///     飞镖发射站闸门有 2 次开启机会，比赛开始 30 秒后和比赛开始4 分钟后各 1 次
     /// </summary>
     /// <returns></returns>
     public int GetDartStationOpenCountAllowed()
@@ -298,7 +298,7 @@ public sealed partial class DartSystem(
 
         if (timeSystem.StageTimeElapsed > 240)
             return 2;
-        else if (timeSystem.StageTimeElapsed > 30)
+        if (timeSystem.StageTimeElapsed > 30)
             return 1;
 
         return 0;
@@ -323,7 +323,7 @@ public sealed partial class DartSystem(
     }
 
     /// <summary>
-    /// 飞镖舱门剩余开启次数
+    ///     飞镖舱门剩余开启次数
     /// </summary>
     /// <param name="camp"></param>
     /// <returns></returns>
@@ -333,7 +333,7 @@ public sealed partial class DartSystem(
     }
 
     /// <summary>
-    /// 尝试打开飞镖舱门
+    ///     尝试打开飞镖舱门
     /// </summary>
     /// <param name="camp"></param>
     /// <returns></returns>
@@ -374,11 +374,8 @@ public sealed partial class DartSystem(
         return true;
     }
 
-    private ushort _lastDartId = 0;
-    private float _lastFireTime = 0;
-
     /// <summary>
-    /// 尝试发射飞镖
+    ///     尝试发射飞镖
     /// </summary>
     /// <param name="camp"></param>
     /// <returns></returns>
@@ -433,9 +430,6 @@ public sealed partial class DartSystem(
         return true;
     }
 
-    private readonly Dictionary<Identity, bool> _interceptedDarts =
-        new Dictionary<Identity, bool>();
-
     public void OnDartIntercepted(Identity dartId)
     {
         _interceptedDarts[dartId] = true;
@@ -443,20 +437,20 @@ public sealed partial class DartSystem(
     }
 
     /// <summary>
-    /// 飞镖命中收益
-    ///  当飞镖首次、第二次、第三次、第四次命中对方前哨站、基地的“固定目标”、“随机固定目标”
-    /// 时，对方所有操作手操作界面分别被遮挡 10 秒（首次）、 5 秒（第二次） 、 3 秒（第三次）、 2 秒
-    /// （第四次）。当飞镖命中对方基地时，己方存活的英雄、步兵机器人分别平分 200（固定目标）、
-    /// 600（随机固定目标）点经验。
-    ///  当飞镖命中对方基地“随机移动目标” 时，对方所有操作手操作界面被遮挡 15 秒，且己方存活的英
+    ///     飞镖命中收益
+    ///      当飞镖首次、第二次、第三次、第四次命中对方前哨站、基地的“固定目标”、“随机固定目标”
+    ///     时，对方所有操作手操作界面分别被遮挡 10 秒（首次）、 5 秒（第二次） 、 3 秒（第三次）、 2 秒
+    ///     （第四次）。当飞镖命中对方基地时，己方存活的英雄、步兵机器人分别平分 200（固定目标）、
+    ///     600（随机固定目标）点经验。
+    ///      当飞镖命中对方基地“随机移动目标” 时，对方所有操作手操作界面被遮挡 15 秒，且己方存活的英
     ///     雄、步兵机器人平分 2500 点经验。
-    ///  若选择“随机固定目标”、 “随机移动目标”后命中基地飞镖检测模块，除去本身对基地造成的伤
+    ///      若选择“随机固定目标”、 “随机移动目标”后命中基地飞镖检测模块，除去本身对基地造成的伤
     ///     害外，对方全部存活的地面机器人分别立即扣除各自当前上限血量 10%、 25%的血量（计入对方全
     ///     队总伤害，但该扣血本身和其导致的机器人战亡不生成经验）。若连续命中，则操作界面被遮挡时
     ///     间叠加计算。每次命中后检测窗口关闭 2 秒。
-    ///  若选择“固定目标”、“随机固定目标”后四发飞镖全部命中基地，或选择“随机移动目标”后任
+    ///      若选择“固定目标”、“随机固定目标”后四发飞镖全部命中基地，或选择“随机移动目标”后任
     ///     意一发飞镖命中基地，对方基地护甲将立刻展开。
-    ///  当基地或前哨站的飞镖引导灯亮起时，若飞镖命中基地或者前哨站， 其对应的增益点暂时失效，持续
+    ///      当基地或前哨站的飞镖引导灯亮起时，若飞镖命中基地或者前哨站， 其对应的增益点暂时失效，持续
     ///     时间为 30 秒，若连续命中，则刷新失效时间。
     /// </summary>
     /// <param name="e"></param>
@@ -498,7 +492,7 @@ public sealed partial class DartSystem(
                 2 => 5,
                 3 => 3,
                 4 => 2,
-                _ => throw new ArgumentOutOfRangeException(),
+                _ => throw new ArgumentOutOfRangeException()
             };
         }
 
@@ -516,9 +510,7 @@ public sealed partial class DartSystem(
                             out Buff existing
                         )
                     )
-                    {
                         duration += (int)(existing.EndTime - timeSystem.Time);
-                    }
 
                     buffSystem.AddBuff(
                         r.Id,
@@ -534,12 +526,11 @@ public sealed partial class DartSystem(
         {
             Camp.Blue => BlueDartStationId,
             Camp.Red => RedDartStationId,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
 
         // do damage
         if (e.Target == DartTarget.RandomFixed)
-        {
             await Task.WhenAll(
                 entitySystem
                     .GetOperatedEntities<IHealthed>(e.Camp)
@@ -551,9 +542,7 @@ public sealed partial class DartSystem(
                         return Task.CompletedTask;
                     })
             );
-        }
         else if (e.Target == DartTarget.RandomMoving)
-        {
             await Task.WhenAll(
                 entitySystem
                     .GetOperatedEntities<IHealthed>(e.Camp)
@@ -561,12 +550,11 @@ public sealed partial class DartSystem(
                     {
                         var damage = (uint)(performanceSystem.GetMaxHealth(r) * 0.25);
                         lifeSystem.DecreaseHealth(r, dartStationId, damage);
-                        battleSystem.SetDamageSum(e.Camp, battleSystem.GetDamageSum(e.Camp)+damage);
+                        battleSystem.SetDamageSum(e.Camp, battleSystem.GetDamageSum(e.Camp) + damage);
 
                         return Task.CompletedTask;
                     })
             );
-        }
 
         // base armor
         if (
@@ -584,29 +572,29 @@ public sealed partial class DartSystem(
 public enum DartTarget : byte
 {
     /// <summary>
-    /// 前哨站
+    ///     前哨站
     /// </summary>
     Outpost,
 
     /// <summary>
-    /// 固定目标
+    ///     固定目标
     /// </summary>
     Fixed,
 
     /// <summary>
-    /// 随机固定目标
+    ///     随机固定目标
     /// </summary>
     RandomFixed,
 
     /// <summary>
-    /// 随机移动目标
+    ///     随机移动目标
     /// </summary>
     RandomMoving,
-        
+
     /// <summary>
-    /// 末端移动目标
+    ///     末端移动目标
     /// </summary>
-    EndMoving,
+    EndMoving
 }
 
 public enum DartStationStatus
@@ -619,7 +607,7 @@ public enum DartStationStatus
 
     Closing,
 
-    Launching,
+    Launching
 }
 
 internal struct DartCounter

@@ -12,10 +12,7 @@ public class JudgeSystemEventFilter : ICommandInterceptor
     )
         where T : ICommand
     {
-        if (command is not IJudgeSystemEvent e)
-        {
-            return;
-        }
+        if (command is not IJudgeSystemEvent e) return;
 
         await next(command, context);
     }

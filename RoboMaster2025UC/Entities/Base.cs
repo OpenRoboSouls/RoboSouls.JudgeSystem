@@ -12,11 +12,10 @@ public class Base : IBuilding, IHealthed
         Id = id;
     }
 
-    [Inject]
-    internal ICacheReader<uint> UintCacheBox { get; set; }
+    [Inject] internal ICacheReader<uint> UintCacheBox { get; set; }
 
-    [Inject]
-    internal ICacheReader<bool> BoolCacheBox { get; set; }
+    [Inject] internal ICacheReader<bool> BoolCacheBox { get; set; }
+
     public bool IsArmorOpen => BoolCacheBox.WithReaderNamespace(Id).Load(ArmorOpenCacheKey);
 
     public Identity Id { get; }

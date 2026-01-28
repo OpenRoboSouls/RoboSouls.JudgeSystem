@@ -5,21 +5,17 @@ using VContainer;
 namespace RoboSouls.JudgeSystem.Systems;
 
 /// <summary>
-/// 机器人模块管理
+///     机器人模块管理
 /// </summary>
 public abstract class ModuleSystemBase : ISystem
 {
-    [Inject]
-    protected ITimeSystem TimeSystem { get; set; }
+    [Inject] protected ITimeSystem TimeSystem { get; set; }
 
-    [Inject]
-    protected EntitySystem EntitySystem { get; set; }
+    [Inject] protected EntitySystem EntitySystem { get; set; }
 
-    [Inject]
-    protected PerformanceSystemBase PerformanceSystem { get; set; }
+    [Inject] protected PerformanceSystemBase PerformanceSystem { get; set; }
 
-    [Inject]
-    protected BuffSystem BuffSystem { get; set; }
+    [Inject] protected BuffSystem BuffSystem { get; set; }
 
     public virtual bool IsSettingIncomplete(in Identity id)
     {
@@ -37,7 +33,7 @@ public abstract class ModuleSystemBase : ISystem
     }
 
     /// <summary>
-    /// 用户设置机器人底盘类型
+    ///     用户设置机器人底盘类型
     /// </summary>
     /// <param name="robotId"></param>
     /// <param name="chassisType"></param>
@@ -45,7 +41,7 @@ public abstract class ModuleSystemBase : ISystem
     public abstract bool TrySetRobotChassisType(IChassisd robotId, byte chassisType);
 
     /// <summary>
-    /// 用户设置机器人发射机构类型
+    ///     用户设置机器人发射机构类型
     /// </summary>
     /// <param name="robotId"></param>
     /// <param name="gunType"></param>
@@ -53,7 +49,7 @@ public abstract class ModuleSystemBase : ISystem
     public abstract bool TrySetRobotGunType(IShooter robotId, byte gunType);
 
     /// <summary>
-    /// 第一视角可视度降低
+    ///     第一视角可视度降低
     /// </summary>
     /// <returns></returns>
     public virtual bool IsFpvVisibilityReduced(in Identity id)
@@ -72,17 +68,13 @@ public abstract class ModuleSystemBase : ISystem
     public virtual void SetFpvVisibilityReduced(in Identity id, bool value)
     {
         if (value)
-        {
             BuffSystem.AddBuff(id, Buffs.FpvVisibilityReduced, 1, TimeSpan.MaxValue);
-        }
         else
-        {
             BuffSystem.RemoveBuff(id, Buffs.FpvVisibilityReduced);
-        }
     }
 
     /// <summary>
-    /// 发射机构锁定
+    ///     发射机构锁定
     /// </summary>
     /// <param name="id"></param>
     /// <returns></returns>
@@ -97,21 +89,16 @@ public abstract class ModuleSystemBase : ISystem
             return;
 
         if (value)
-        {
             BuffSystem.AddBuff(id, Buffs.GunLocked, 1, TimeSpan.MaxValue);
-        }
         else
-        {
             BuffSystem.RemoveBuff(id, Buffs.GunLocked);
-        }
     }
 
     /// <summary>
-    /// 裁判系功率倍率
-    ///
-    /// 1. 从性能体系计算功率倍率
-    /// 2. 从buff获得额外倍率
-    /// 3. 断电控制
+    ///     裁判系功率倍率
+    ///     1. 从性能体系计算功率倍率
+    ///     2. 从buff获得额外倍率
+    ///     3. 断电控制
     /// </summary>
     /// <param name="id"></param>
     /// <returns></returns>
@@ -120,15 +107,9 @@ public abstract class ModuleSystemBase : ISystem
         if (EntitySystem.TryGetOperatedEntity(id, out IHealthed healthed) && healthed.IsDead())
             return 0;
 
-        if (BuffSystem.TryGetBuff(id, Buffs.ChassisPowerOffBuff, out Buff _))
-        {
-            return 0;
-        }
+        if (BuffSystem.TryGetBuff(id, Buffs.ChassisPowerOffBuff, out Buff _)) return 0;
 
-        if (!BuffSystem.TryGetBuff(id, Buffs.PowerBuff, out float buffValue))
-        {
-            buffValue = 1;
-        }
+        if (!BuffSystem.TryGetBuff(id, Buffs.PowerBuff, out float buffValue)) buffValue = 1;
 
         buffValue = MathF.Sqrt(buffValue);
 
@@ -156,15 +137,9 @@ public abstract class ModuleSystemBase : ISystem
         if (TimeSystem.Stage != JudgeSystemStage.Match)
             return false;
 
-        if (BuffSystem.TryGetBuff(id, Buffs.YellowCard, out Buff _))
-        {
-            return true;
-        }
+        if (BuffSystem.TryGetBuff(id, Buffs.YellowCard, out Buff _)) return true;
 
-        if (BuffSystem.TryGetBuff(id, Buffs.YellowCardTeammate, out Buff _))
-        {
-            return true;
-        }
+        if (BuffSystem.TryGetBuff(id, Buffs.YellowCardTeammate, out Buff _)) return true;
 
         return false;
     }

@@ -8,16 +8,13 @@ namespace RoboSouls.JudgeSystem.RoboMaster2026UL.Systems;
 
 public sealed class SentrySystem : ISystem
 {
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
+    [Inject] internal ITimeSystem TimeSystem { get; set; }
 
-    [Inject]
-    internal BattleSystem BattleSystem { get; set; }
+    [Inject] internal BattleSystem BattleSystem { get; set; }
 
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
+    [Inject] internal EntitySystem EntitySystem { get; set; }
 
-    public Task Reset(CancellationToken cancellation = new CancellationToken())
+    public Task Reset(CancellationToken cancellation = new())
     {
         TimeSystem.RegisterOnceAction(
             JudgeSystemStage.Match,
@@ -25,14 +22,10 @@ public sealed class SentrySystem : ISystem
             () =>
             {
                 if (EntitySystem.TryGetOperatedEntity(Identity.RedSentry, out Sentry rs))
-                {
                     BattleSystem.SetAmmoAllowance(rs, 750);
-                }
 
                 if (EntitySystem.TryGetOperatedEntity(Identity.BlueSentry, out Sentry bs))
-                {
                     BattleSystem.SetAmmoAllowance(bs, 750);
-                }
             }
         );
 

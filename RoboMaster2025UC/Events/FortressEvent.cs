@@ -4,7 +4,7 @@ using RoboSouls.JudgeSystem.Events;
 namespace RoboSouls.JudgeSystem.RoboMaster2025UC.Events;
 
 /// <summary>
-/// 堡垒增益点生效
+///     堡垒增益点生效
 /// </summary>
 public readonly struct FortressActivateEvent
     : IJudgeSystemEvent<FortressActivateEvent>,
@@ -44,7 +44,7 @@ public readonly struct FortressActivateEvent
 }
 
 /// <summary>
-/// 使用堡垒增益点
+///     使用堡垒增益点
 /// </summary>
 public readonly struct FortressEnterEvent
     : IJudgeSystemEvent<FortressEnterEvent>,
@@ -84,7 +84,7 @@ public readonly struct FortressEnterEvent
 }
 
 /// <summary>
-/// 离开堡垒增益点
+///     离开堡垒增益点
 /// </summary>
 public readonly struct FortressExitEvent
     : IJudgeSystemEvent<FortressExitEvent>,

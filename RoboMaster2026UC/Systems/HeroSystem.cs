@@ -8,17 +8,16 @@ using VitalRouter;
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 
 /// <summary>
-/// 英雄机器人机制
-///
-/// 英雄机器人位于己方半场（详见“图 5-20 己方半场示意图” ） 时，可以选择进入“部署模式”。 确认进
-/// 入“部署模式” 2 秒后，英雄机器人进入“部署模式”， 在该模式下， 英雄机器人底盘断电，获得 25%防
-/// 御增益，且发射 42mm 弹丸攻击基地时具有 150%攻击增益，在命中基地后， 己方获得 50 金币。
-/// 在“部署模式”下攻击基地时，具有攻击增益和金币奖励的 42mm 弹丸数量受限。在比赛进行 t 秒后，具
-/// 有攻击增益和金币奖励的弹丸数量至多为 M。 M 与 t 的关系为M = 2 + 𝑡𝑡
-/// 20，计算结果向下取整。在部署模
-/// 式下，命中对方基地的具有增益的 42mm 弹丸总数量=M 后，英雄机器人发射 42mm 弹丸攻击基地不再
-/// 具有 150%攻击增益和金币奖励； 在部署模式下命中对方基地的具有增益的 42mm 弹丸总数量＜M 时，
-/// 英雄机器人发射 42mm 弹丸攻击基地可重新获得上述增益和金币奖励。
+///     英雄机器人机制
+///     英雄机器人位于己方半场（详见“图 5-20 己方半场示意图” ） 时，可以选择进入“部署模式”。 确认进
+///     入“部署模式” 2 秒后，英雄机器人进入“部署模式”， 在该模式下， 英雄机器人底盘断电，获得 25%防
+///     御增益，且发射 42mm 弹丸攻击基地时具有 150%攻击增益，在命中基地后， 己方获得 50 金币。
+///     在“部署模式”下攻击基地时，具有攻击增益和金币奖励的 42mm 弹丸数量受限。在比赛进行 t 秒后，具
+///     有攻击增益和金币奖励的弹丸数量至多为 M。 M 与 t 的关系为M = 2 + 𝑡𝑡
+///     20，计算结果向下取整。在部署模
+///     式下，命中对方基地的具有增益的 42mm 弹丸总数量=M 后，英雄机器人发射 42mm 弹丸攻击基地不再
+///     具有 150%攻击增益和金币奖励； 在部署模式下命中对方基地的具有增益的 42mm 弹丸总数量＜M 时，
+///     英雄机器人发射 42mm 弹丸攻击基地可重新获得上述增益和金币奖励。
 /// </summary>
 public sealed class HeroSystem(
     BuffSystem buffSystem,
@@ -31,22 +30,23 @@ public sealed class HeroSystem(
     ICommandPublisher commandPublisher)
     : ISystem
 {
+    public enum EnterDeploymentModeRefuseReason
+    {
+        Dead,
+        Zone,
+        Unknown
+    }
+
     public const ushort DeploymentZoneId = 250;
-    public static readonly Identity RedDeployZoneId = new Identity(Camp.Red, DeploymentZoneId);
-    public static readonly Identity BlueDeployZoneId = new Identity(
+    public static readonly Identity RedDeployZoneId = new(Camp.Red, DeploymentZoneId);
+
+    public static readonly Identity BlueDeployZoneId = new(
         Camp.Blue,
         DeploymentZoneId
     );
 
     private static readonly int DeployHitCountCacheKey = "deploy_hit_count".Sum();
     private static readonly int DeployStartTimeCacheKey = "deploy_start_time".Sum();
-
-    public enum EnterDeploymentModeRefuseReason
-    {
-        Dead,
-        Zone,
-        Unknown,
-    }
 
     public bool CanEnterDeploymentMode(
         in Identity id,
@@ -95,7 +95,7 @@ public sealed class HeroSystem(
     }
 
     /// <summary>
-    /// 在比赛进行 t 秒后，具有攻击增益和金币奖励的弹丸数量至多为 M。 M 与 t 的关系为M = 2 + 𝑡/20，
+    ///     在比赛进行 t 秒后，具有攻击增益和金币奖励的弹丸数量至多为 M。 M 与 t 的关系为M = 2 + 𝑡/20，
     /// </summary>
     /// <returns></returns>
     public int GetDeployHitCountAllowance()

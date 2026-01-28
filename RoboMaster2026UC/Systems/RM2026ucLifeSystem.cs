@@ -12,12 +12,14 @@ namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 public sealed class RM2026ucLifeSystem(ZoneSystem zoneSystem, EconomySystem economySystem) : LifeSystem
 {
     private static readonly int ReviveProgressTotalCacheKey = "revive_progress_total".Sum();
+
     private static readonly int ReviveProgressRemainingCacheKey =
         "revive_progress_remaining".Sum();
+
     private static readonly int BuyReviveCountCacheKey = "buy_revive_count".Sum();
 
     public override async Task Reset(
-        CancellationToken cancellation = new CancellationToken()
+        CancellationToken cancellation = new()
     )
     {
         await base.Reset(cancellation);
@@ -40,10 +42,7 @@ public sealed class RM2026ucLifeSystem(ZoneSystem zoneSystem, EconomySystem econ
 
     public bool TryBuyRevive(Identity id)
     {
-        if (!EntitySystem.TryGetOperatedEntity(id, out IHealthed h))
-        {
-            return false;
-        }
+        if (!EntitySystem.TryGetOperatedEntity(id, out IHealthed h)) return false;
 
         if (!h.IsDead())
             return false;
@@ -55,10 +54,7 @@ public sealed class RM2026ucLifeSystem(ZoneSystem zoneSystem, EconomySystem econ
             return false;
 
         var cost = CalcBuyReviveRequiredCoin(id);
-        if (!economySystem.TryDecreaseCoin(id.Camp, cost))
-        {
-            return false;
-        }
+        if (!economySystem.TryDecreaseCoin(id.Camp, cost)) return false;
 
         /*
          * 当通过使用金币兑换立即复活时：
@@ -185,19 +181,13 @@ public sealed class RM2026ucLifeSystem(ZoneSystem zoneSystem, EconomySystem econ
         {
             Camp.Red => Identity.RedBase,
             Camp.Blue => Identity.BlueBase,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
         var b = EntitySystem.Entities[baseId] as Base;
         var delta = 1;
-        if (SupplySystem.IsInSupplyZone(zoneSystem, healthed.Id))
-        {
-            delta = 4;
-        }
+        if (SupplySystem.IsInSupplyZone(zoneSystem, healthed.Id)) delta = 4;
 
-        if (b.Health < 2000)
-        {
-            delta = 4;
-        }
+        if (b.Health < 2000) delta = 4;
         SetRemainingReviveRequiredProgress(healthed.Id, Math.Max(0, remaining - delta));
     }
 
@@ -220,9 +210,8 @@ public sealed class RM2026ucLifeSystem(ZoneSystem zoneSystem, EconomySystem econ
          */
         if (healthed is Base b)
         {
-            
         }
-            
+
         return base.IncreaseHealth(healthed, value);
     }
 }

@@ -11,6 +11,7 @@ public interface IBuffSystem
         TimeSpan duration,
         bool force = false
     );
+
     void RemoveBuff(in Identity buffable, int buffType);
     bool TryGetBuff(in Identity buffable, int buffType, out Buff buff);
 }
@@ -28,17 +29,12 @@ public sealed class BuffSystem(ICacheProvider<Buff> buffCacheBox, ITimeSystem ti
     )
     {
         if (!force)
-        {
             if (TryGetBuff(buffable, buffType, out Buff oldBuff))
             {
-                if (oldBuff.Value > buffValue || oldBuff.Duration > TimeSpan.MaxValue / 2)
-                {
-                    return;
-                }
+                if (oldBuff.Value > buffValue || oldBuff.Duration > TimeSpan.MaxValue / 2) return;
 
                 duration += TimeSpan.FromSeconds(oldBuff.EndTime - timeSystem.Time);
             }
-        }
 
         buffCacheBox
             .WithWriterNamespace(buffable)

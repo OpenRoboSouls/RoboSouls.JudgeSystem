@@ -7,48 +7,37 @@ using VContainer;
 namespace RoboSouls.JudgeSystem.RoboMaster2025UL.Systems;
 
 /// <summary>
-/// 补给系统
+///     补给系统
 /// </summary>
 public sealed class SupplySystem : ISystem
 {
     public const ushort SupplyZoneId = 50;
-    public static readonly Identity RedSupplyZoneId = new Identity(Camp.Red, SupplyZoneId);
-    public static readonly Identity BlueSupplyZoneId = new Identity(Camp.Blue, SupplyZoneId);
+    public static readonly Identity RedSupplyZoneId = new(Camp.Red, SupplyZoneId);
+    public static readonly Identity BlueSupplyZoneId = new(Camp.Blue, SupplyZoneId);
 
-    [Inject]
-    internal ILogger Logger { get; set; }
+    [Inject] internal ILogger Logger { get; set; }
 
-    [Inject]
-    internal ICacheProvider<uint> UintCacheBox { get; set; }
+    [Inject] internal ICacheProvider<uint> UintCacheBox { get; set; }
 
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
+    [Inject] internal EntitySystem EntitySystem { get; set; }
 
-    [Inject]
-    internal ZoneSystem ZoneSystem { get; set; }
+    [Inject] internal ZoneSystem ZoneSystem { get; set; }
 
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
+    [Inject] internal ITimeSystem TimeSystem { get; set; }
 
-    [Inject]
-    internal EconomySystem EconomySystem { get; set; }
+    [Inject] internal EconomySystem EconomySystem { get; set; }
 
-    [Inject]
-    internal BattleSystem BattleSystem { get; set; }
+    [Inject] internal BattleSystem BattleSystem { get; set; }
 
-    [Inject]
-    internal BuffSystem BuffSystem { get; set; }
+    [Inject] internal BuffSystem BuffSystem { get; set; }
 
-    [Inject]
-    internal PerformanceSystemBase aPerformanceSystemBase { get; set; }
+    [Inject] internal PerformanceSystemBase aPerformanceSystemBase { get; set; }
 
-    [Inject]
-    internal LifeSystem LifeSystem { get; set; }
+    [Inject] internal LifeSystem LifeSystem { get; set; }
 
-    [Inject]
-    internal ModuleSystemBase ModuleSystem { get; set; }
+    [Inject] internal ModuleSystemBase ModuleSystem { get; set; }
 
-    public Task Reset(CancellationToken cancellation = new CancellationToken())
+    public Task Reset(CancellationToken cancellation = new())
     {
         TimeSystem.RegisterRepeatAction(1, SupplyUpdateLoop);
 
@@ -66,15 +55,9 @@ public sealed class SupplySystem : ISystem
         )
             return false;
 
-        if (entity.Camp == Camp.Red)
-        {
-            return ZoneSystem.IsInZone(entity, RedSupplyZoneId);
-        }
+        if (entity.Camp == Camp.Red) return ZoneSystem.IsInZone(entity, RedSupplyZoneId);
 
-        if (entity.Camp == Camp.Blue)
-        {
-            return ZoneSystem.IsInZone(entity, BlueSupplyZoneId);
-        }
+        if (entity.Camp == Camp.Blue) return ZoneSystem.IsInZone(entity, BlueSupplyZoneId);
 
         return false;
     }
@@ -85,7 +68,7 @@ public sealed class SupplySystem : ISystem
         {
             PerformanceSystemBase.AmmoType17mm => 1,
             PerformanceSystemBase.AmmoType42mm => 10,
-            _ => int.MaxValue,
+            _ => int.MaxValue
         };
     }
 
@@ -116,10 +99,7 @@ public sealed class SupplySystem : ISystem
         if (!CheckCanBuy(shooter.Id, shooter.AmmoType, amount, out var cost))
             return;
 
-        if (!EconomySystem.TryDecreaseCoin(shooter.Id.Camp, cost))
-        {
-            return;
-        }
+        if (!EconomySystem.TryDecreaseCoin(shooter.Id.Camp, cost)) return;
 
         BattleSystem.SetAmmoAllowance(shooter, shooter.AmmoAllowance + amount);
     }

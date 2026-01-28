@@ -4,7 +4,7 @@ using RoboSouls.JudgeSystem.Events;
 namespace RoboSouls.JudgeSystem.RoboMaster2025UC.Events;
 
 /// <summary>
-/// 占领敌方堡垒时间达到，基地护甲展开
+///     占领敌方堡垒时间达到，基地护甲展开
 /// </summary>
 public readonly struct FortressOccupyBaseEvent
     : IJudgeSystemEvent<FortressOccupyBaseEvent>,

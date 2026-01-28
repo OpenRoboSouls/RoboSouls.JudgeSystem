@@ -5,12 +5,12 @@ namespace RoboSouls.JudgeSystem;
 
 public abstract class JudgeSystem
 {
-    public virtual Task StartAsync(CancellationToken cancellation = new CancellationToken())
+    public virtual Task StartAsync(CancellationToken cancellation = new())
     {
         return Task.CompletedTask;
     }
 
-    public virtual Task Reset(CancellationToken cancellation = new CancellationToken())
+    public virtual Task Reset(CancellationToken cancellation = new())
     {
         return Task.CompletedTask;
     }

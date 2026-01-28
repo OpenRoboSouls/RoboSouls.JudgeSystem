@@ -5,22 +5,17 @@ using VitalRouter;
 namespace RoboSouls.JudgeSystem.RoboMaster2025UC.Systems;
 
 /// <summary>
-/// 地形跨越增益点（高地）
+///     地形跨越增益点（高地）
 /// </summary>
 [Routes]
 public sealed partial class HighlandTerrainLeapZoneSystem : TerrainLeapZoneSystem
 {
-    [Inject]
-    internal void Inject(Router router)
-    {
-        MapTo(router);
-    }
-
-    public static readonly Identity HighlandTerrainLeapTriggerZoneId = new Identity(
+    public static readonly Identity HighlandTerrainLeapTriggerZoneId = new(
         Camp.Judge,
         170
     );
-    public static readonly Identity HighlandTerrainLeapActivationZoneId = new Identity(
+
+    public static readonly Identity HighlandTerrainLeapActivationZoneId = new(
         Camp.Judge,
         180
     );
@@ -30,7 +25,15 @@ public sealed partial class HighlandTerrainLeapZoneSystem : TerrainLeapZoneSyste
     public override int MaxActivationTime => 5;
     public override int BuffDuration => 30;
 
-    protected override void OnActivationStart(in Identity operatorId) { }
+    [Inject]
+    internal void Inject(Router router)
+    {
+        MapTo(router);
+    }
+
+    protected override void OnActivationStart(in Identity operatorId)
+    {
+    }
 
     protected override void OnActivationSuccess(in Identity operatorId, double activationTime)
     {
@@ -50,18 +53,16 @@ public sealed partial class HighlandTerrainLeapZoneSystem : TerrainLeapZoneSyste
             >= 120 and < 180 => 2,
             >= 180 and < 300 => 3,
             >= 300 and < 420 => 5,
-            _ => 0,
+            _ => 0
         };
 
         if (cooldownBuffValue > 0)
-        {
             BuffSystem.AddBuff(
                 operatorId,
                 Buffs.CoolDownBuff,
                 cooldownBuffValue,
                 TimeSpan.FromSeconds(BuffDuration)
             );
-        }
 
         BuffSystem.AddBuff(
             operatorId,

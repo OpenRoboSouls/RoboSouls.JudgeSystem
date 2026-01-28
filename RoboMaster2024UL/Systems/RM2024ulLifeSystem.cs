@@ -11,7 +11,7 @@ public sealed class RM2024ulLifeSystem : LifeSystem
 {
     private static readonly int ReviveProgressCacheKey = "revive_progress".Sum();
 
-    public override async Task Reset(CancellationToken cancellation = new CancellationToken())
+    public override async Task Reset(CancellationToken cancellation = new())
     {
         await base.Reset(cancellation);
         TimeSystem.RegisterRepeatAction(
@@ -72,7 +72,7 @@ public sealed class RM2024ulLifeSystem : LifeSystem
     }
 
     /// <summary>
-    /// 获取复活进度
+    ///     获取复活进度
     /// </summary>
     /// <param name="healthed"></param>
     /// <param name="value"></param>
@@ -87,7 +87,7 @@ public sealed class RM2024ulLifeSystem : LifeSystem
     }
 
     /// <summary>
-    /// 每秒自动增加2点复活进度
+    ///     每秒自动增加2点复活进度
     /// </summary>
     /// <param name="progress"></param>
     /// <returns>所需秒数</returns>

@@ -13,69 +13,63 @@ using VitalRouter;
 namespace RoboSouls.JudgeSystem.RoboMaster2025UC.Systems;
 
 /// <summary>
-/// 堡垒机制
-///
-/// 堡垒增益点仅能被己方步兵机器人或哨兵机器人占领。 同一时间仅能被一台机器人占领。
-/// 在己方前哨站被击毁前，堡垒增益点处于失效状态。 在己方前哨站被击毁后，堡垒增益点生效。
-/// 定义己方基地血量上限减去现有基地血量的差值为∆ 。
-/// 占领堡垒增益点的机器人处于无敌状态， 且获得值为 w 的射击热量冷却增益， w 与Δ相关，具体关系如下：
-/// w = ∆ / 20（向下取整）， w 的上限为 150。
-/// 堡垒增益区拥有独立的允许发弹量上限 N，占领堡垒增益区的机器人在发射弹丸时，优先消耗堡垒储备的
-/// 允许发弹量，储备允许发弹量耗尽后再消耗机器人的允许发弹量。在 N 增加时，提升的允许发弹量上限将
-/// 立即被添加至堡垒的储备允许发弹量。
-/// N = 200 + 4 × ∆ / 15（向下取整）， N 至多为 1000。
-///
-/// 示例：
-/// 一台射击热量冷却速率为 80/秒的机器人，同时获得了堡垒增益点提供的值为 150 的热量增益和 5 倍
-/// 热量冷却增益。由于 80*5>80+150，故机器人实际射击热量冷却速率为 400/秒。
+///     堡垒机制
+///     堡垒增益点仅能被己方步兵机器人或哨兵机器人占领。 同一时间仅能被一台机器人占领。
+///     在己方前哨站被击毁前，堡垒增益点处于失效状态。 在己方前哨站被击毁后，堡垒增益点生效。
+///     定义己方基地血量上限减去现有基地血量的差值为∆ 。
+///     占领堡垒增益点的机器人处于无敌状态， 且获得值为 w 的射击热量冷却增益， w 与Δ相关，具体关系如下：
+///     w = ∆ / 20（向下取整）， w 的上限为 150。
+///     堡垒增益区拥有独立的允许发弹量上限 N，占领堡垒增益区的机器人在发射弹丸时，优先消耗堡垒储备的
+///     允许发弹量，储备允许发弹量耗尽后再消耗机器人的允许发弹量。在 N 增加时，提升的允许发弹量上限将
+///     立即被添加至堡垒的储备允许发弹量。
+///     N = 200 + 4 × ∆ / 15（向下取整）， N 至多为 1000。
+///     示例：
+///     一台射击热量冷却速率为 80/秒的机器人，同时获得了堡垒增益点提供的值为 150 的热量增益和 5 倍
+///     热量冷却增益。由于 80*5>80+150，故机器人实际射击热量冷却速率为 400/秒。
 /// </summary>
 [Routes]
 public sealed partial class FortressSystem : ISystem
 {
-    [Inject]
-    internal void Inject(Router router)
-    {
-        MapTo(router);
-    }
-
-    public static readonly Identity RedFortressZoneId = new Identity(Camp.Red, 90);
-    public static readonly Identity BlueFortressZoneId = new Identity(Camp.Blue, 90);
+    public static readonly Identity RedFortressZoneId = new(Camp.Red, 90);
+    public static readonly Identity BlueFortressZoneId = new(Camp.Blue, 90);
 
     private static readonly int FortressActiveCacheKey = "FortressActive".Sum();
     private static readonly int CurrentFortressUserCacheKey = "CurrentFortressUser".Sum();
     private static readonly int AmmoSpentCacheKey = "AmmoSpent".Sum();
 
-    [Inject]
-    internal BuffSystem BuffSystem { get; set; }
+    private static readonly int LastEnterOppositeFortressTimeKey =
+        "LastEnterOppositeFortressTime".Sum();
 
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
+    private static readonly int LastLeaveOppositeFortressTimeKey =
+        "LastEnterOppositeFortressTime".Sum();
 
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
+    private readonly Dictionary<Camp, Identity> _lastEnterOppositeFortressUser = new()
+    {
+        { Camp.Red, Identity.Spectator },
+        { Camp.Blue, Identity.Spectator }
+    };
 
-    [Inject]
-    internal ICacheProvider<bool> BoolCacheBox { get; set; }
+    [Inject] internal BuffSystem BuffSystem { get; set; }
 
-    [Inject]
-    internal ICacheProvider<ushort> UshortCacheBox { get; set; }
+    [Inject] internal EntitySystem EntitySystem { get; set; }
 
-    [Inject]
-    internal ICacheProvider<int> IntCacheBox { get; set; }
+    [Inject] internal ITimeSystem TimeSystem { get; set; }
 
-    [Inject]
-    internal ICacheProvider<double> DoubleCacheBox { get; set; }
+    [Inject] internal ICacheProvider<bool> BoolCacheBox { get; set; }
 
-    [Inject]
-    internal ICommandPublisher CommandPublisher { get; set; }
+    [Inject] internal ICacheProvider<ushort> UshortCacheBox { get; set; }
 
-    [Inject]
-    internal BattleSystem BattleSystem { get; set; }
+    [Inject] internal ICacheProvider<int> IntCacheBox { get; set; }
 
-    [Inject]
-    internal BaseSystem BaseSystem { get; set; }
+    [Inject] internal ICacheProvider<double> DoubleCacheBox { get; set; }
 
-    public Task Reset(CancellationToken cancellation = new CancellationToken())
+    [Inject] internal ICommandPublisher CommandPublisher { get; set; }
+
+    [Inject] internal BattleSystem BattleSystem { get; set; }
+
+    [Inject] internal BaseSystem BaseSystem { get; set; }
+
+    public Task Reset(CancellationToken cancellation = new())
     {
         SetFortressActive(Camp.Red, false);
         SetFortressActive(Camp.Blue, false);
@@ -94,13 +88,19 @@ public sealed partial class FortressSystem : ISystem
         return Task.CompletedTask;
     }
 
+    [Inject]
+    internal void Inject(Router router)
+    {
+        MapTo(router);
+    }
+
     public bool IsFortressActive(Camp camp)
     {
         var id = camp switch
         {
             Camp.Red => RedFortressZoneId,
             Camp.Blue => BlueFortressZoneId,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
 
         return BoolCacheBox
@@ -117,7 +117,7 @@ public sealed partial class FortressSystem : ISystem
         {
             Camp.Red => RedFortressZoneId,
             Camp.Blue => BlueFortressZoneId,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
 
         BoolCacheBox.WithWriterNamespace(id).Save(FortressActiveCacheKey, active);
@@ -131,7 +131,7 @@ public sealed partial class FortressSystem : ISystem
         {
             Camp.Red => RedFortressZoneId,
             Camp.Blue => BlueFortressZoneId,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
 
         return UshortCacheBox
@@ -147,28 +147,24 @@ public sealed partial class FortressSystem : ISystem
             return;
 
         if (user != 0)
-        {
             CommandPublisher.PublishAsync(new FortressEnterEvent(new Identity(camp, user)));
-        }
         else
-        {
             CommandPublisher.PublishAsync(
                 new FortressExitEvent(new Identity(camp, GetCurrentFortressUserID(camp)))
             );
-        }
 
         var id = camp switch
         {
             Camp.Red => RedFortressZoneId,
             Camp.Blue => BlueFortressZoneId,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
 
         UshortCacheBox.WithWriterNamespace(id).Save(CurrentFortressUserCacheKey, user);
     }
 
     /// <summary>
-    /// 获取热量增益
+    ///     获取热量增益
     /// </summary>
     /// <param name="camp"></param>
     /// <returns></returns>
@@ -179,7 +175,7 @@ public sealed partial class FortressSystem : ISystem
         {
             Camp.Red => Identity.RedBase,
             Camp.Blue => Identity.BlueBase,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
 
         var b = EntitySystem.Entities[baseId] as Base;
@@ -192,7 +188,7 @@ public sealed partial class FortressSystem : ISystem
     }
 
     /// <summary>
-    /// 获取允许发弹量上限
+    ///     获取允许发弹量上限
     /// </summary>
     /// <param name="camp"></param>
     /// <returns></returns>
@@ -202,7 +198,7 @@ public sealed partial class FortressSystem : ISystem
         {
             Camp.Red => Identity.RedBase,
             Camp.Blue => Identity.BlueBase,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
 
         var b = EntitySystem.Entities[baseId] as Base;
@@ -215,7 +211,7 @@ public sealed partial class FortressSystem : ISystem
     }
 
     /// <summary>
-    /// 获取已消耗弹药
+    ///     获取已消耗弹药
     /// </summary>
     /// <param name="camp"></param>
     /// <returns></returns>
@@ -225,7 +221,7 @@ public sealed partial class FortressSystem : ISystem
         {
             Camp.Red => RedFortressZoneId,
             Camp.Blue => BlueFortressZoneId,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
 
         return IntCacheBox.WithReaderNamespace(id).TryLoad(AmmoSpentCacheKey, out var spent)
@@ -234,7 +230,7 @@ public sealed partial class FortressSystem : ISystem
     }
 
     /// <summary>
-    /// 获取允许发弹量
+    ///     获取允许发弹量
     /// </summary>
     /// <param name="camp"></param>
     /// <returns></returns>
@@ -249,7 +245,7 @@ public sealed partial class FortressSystem : ISystem
         {
             Camp.Red => RedFortressZoneId,
             Camp.Blue => BlueFortressZoneId,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
 
         IntCacheBox.WithWriterNamespace(id).Save(AmmoSpentCacheKey, spent);
@@ -273,9 +269,7 @@ public sealed partial class FortressSystem : ISystem
                 return;
 
             if (GetCurrentFortressUserID(evt.OperatorId.Camp) == 0)
-            {
                 SetCurrentFortressUser(evt.OperatorId.Camp, evt.OperatorId.Id);
-            }
         }
         else
         {
@@ -286,14 +280,10 @@ public sealed partial class FortressSystem : ISystem
                 return;
 
             if (GetLastEnterOppositeFortressTime(evt.OperatorId.Camp) <= 0)
-            {
                 SetLastEnterOppositeFortressTime(evt.OperatorId.Camp, TimeSystem.Time);
-            }
 
             if (GetLastEnterOppositeFortressUser(evt.OperatorId.Camp) == Identity.Spectator)
-            {
                 SetLastEnterOppositeFortressUser(evt.OperatorId);
-            }
         }
     }
 
@@ -327,9 +317,7 @@ public sealed partial class FortressSystem : ISystem
                 return;
 
             if (GetLastEnterOppositeFortressUser(evt.OperatorId.Camp).Id == evt.OperatorId.Id)
-            {
                 SetLastEnterOppositeFortressUser(Identity.Spectator);
-            }
         }
     }
 
@@ -338,10 +326,7 @@ public sealed partial class FortressSystem : ISystem
     {
         if (TimeSystem.Stage is not JudgeSystemStage.Match)
             return;
-        if (evt.Victim.IsOutpost())
-        {
-            SetFortressActive(evt.Victim.Camp, true);
-        }
+        if (evt.Victim.IsOutpost()) SetFortressActive(evt.Victim.Camp, true);
     }
 
     private void FortressOccupierUpdateLoop()
@@ -406,18 +391,13 @@ public sealed partial class FortressSystem : ISystem
         BattleSystem.SetAmmoAllowance(command.Shooter, command.Shooter.AmmoAllowance + payback);
     }
 
-    private static readonly int LastEnterOppositeFortressTimeKey =
-        "LastEnterOppositeFortressTime".Sum();
-    private static readonly int LastLeaveOppositeFortressTimeKey =
-        "LastEnterOppositeFortressTime".Sum();
-
     private double GetLastEnterOppositeFortressTime(Camp camp)
     {
         var id = camp switch
         {
             Camp.Red => BlueFortressZoneId,
             Camp.Blue => RedFortressZoneId,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
 
         return DoubleCacheBox.WithReaderNamespace(id).Load(LastEnterOppositeFortressTimeKey);
@@ -429,7 +409,7 @@ public sealed partial class FortressSystem : ISystem
         {
             Camp.Red => BlueFortressZoneId,
             Camp.Blue => RedFortressZoneId,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
 
         DoubleCacheBox.WithWriterNamespace(id).Save(LastEnterOppositeFortressTimeKey, time);
@@ -441,7 +421,7 @@ public sealed partial class FortressSystem : ISystem
         {
             Camp.Red => BlueFortressZoneId,
             Camp.Blue => RedFortressZoneId,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
 
         return DoubleCacheBox.WithReaderNamespace(id).Load(LastLeaveOppositeFortressTimeKey);
@@ -453,20 +433,11 @@ public sealed partial class FortressSystem : ISystem
         {
             Camp.Red => BlueFortressZoneId,
             Camp.Blue => RedFortressZoneId,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
 
         DoubleCacheBox.WithWriterNamespace(id).Save(LastLeaveOppositeFortressTimeKey, time);
     }
-
-    private readonly Dictionary<Camp, Identity> _lastEnterOppositeFortressUser = new Dictionary<
-        Camp,
-        Identity
-    >
-    {
-        { Camp.Red, Identity.Spectator },
-        { Camp.Blue, Identity.Spectator },
-    };
 
     private Identity GetLastEnterOppositeFortressUser(Camp camp)
     {
@@ -505,7 +476,7 @@ public sealed partial class FortressSystem : ISystem
             {
                 Camp.Red => Identity.BlueBase,
                 Camp.Blue => Identity.RedBase,
-                _ => throw new ArgumentOutOfRangeException(),
+                _ => throw new ArgumentOutOfRangeException()
             };
 
             var b = EntitySystem.Entities[baseId] as Base;

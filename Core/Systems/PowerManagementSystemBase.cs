@@ -6,11 +6,9 @@ public abstract class PowerManagementSystemBase : ISystem
 {
     private static readonly int EnergyConsumptionKey = "EnergyConsumption".GetHashCode();
 
-    [Inject]
-    protected ILogger Logger { get; set; }
+    [Inject] protected ILogger Logger { get; set; }
 
-    [Inject]
-    protected ICacheProvider<float> FloatCacheProvider { get; set; }
+    [Inject] protected ICacheProvider<float> FloatCacheProvider { get; set; }
 
     public virtual void OnEnergyConsumption(Identity robot, float consumption)
     {

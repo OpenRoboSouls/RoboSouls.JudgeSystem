@@ -6,7 +6,7 @@ public interface IZoneEvent
 }
 
 /// <summary>
-/// 进入区域
+///     进入区域
 /// </summary>
 public readonly record struct EnterZoneEvent(Identity ZoneId, Identity OperatorId) : IZoneEvent,
     IJudgeSystemEvent<EnterZoneEvent>
@@ -15,7 +15,7 @@ public readonly record struct EnterZoneEvent(Identity ZoneId, Identity OperatorI
 }
 
 /// <summary>
-/// 离开区域
+///     离开区域
 /// </summary>
 public readonly record struct ExitZoneEvent(Identity ZoneId, Identity OperatorId) : IZoneEvent,
     IJudgeSystemEvent<ExitZoneEvent>

@@ -7,20 +7,15 @@ namespace RoboSouls.JudgeSystem.Systems;
 
 public class OperatorSystem : ISystem
 {
-    [Inject]
-    public LifeSystem LifeSystem { get; set; }
+    [Inject] public LifeSystem LifeSystem { get; set; }
 
-    [Inject]
-    public ILogger Logger { get; set; }
+    [Inject] public ILogger Logger { get; set; }
 
-    [Inject]
-    public EntitySystem EntitySystem { get; set; }
+    [Inject] public EntitySystem EntitySystem { get; set; }
 
-    [Inject]
-    public ITimeSystem TimeSystem { get; set; }
+    [Inject] public ITimeSystem TimeSystem { get; set; }
 
-    [Inject]
-    public ICommandPublisher CommandPublisher { get; set; }
+    [Inject] public ICommandPublisher CommandPublisher { get; set; }
 
     public void OperatorLogin(in Identity id)
     {
@@ -29,10 +24,7 @@ public class OperatorSystem : ISystem
 
         Logger.Info($"Operator of {id} logged in");
         EntitySystem.AssignOperator(id);
-        if (robot is IHealthed healthed)
-        {
-            LifeSystem.ResetHealth(healthed);
-        }
+        if (robot is IHealthed healthed) LifeSystem.ResetHealth(healthed);
 
         CommandPublisher.PublishAsync(new OperatorLoginEvent(id));
     }

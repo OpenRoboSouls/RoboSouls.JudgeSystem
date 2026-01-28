@@ -13,17 +13,17 @@ namespace RoboSouls.JudgeSystem.RoboMaster2025UC.Systems;
 public sealed class RM2025ucLifeSystem : LifeSystem
 {
     private static readonly int ReviveProgressTotalCacheKey = "revive_progress_total".Sum();
+
     private static readonly int ReviveProgressRemainingCacheKey =
         "revive_progress_remaining".Sum();
+
     private static readonly int BuyReviveCountCacheKey = "buy_revive_count".Sum();
 
-    [Inject]
-    internal ZoneSystem ZoneSystem { get; set; }
+    [Inject] internal ZoneSystem ZoneSystem { get; set; }
 
-    [Inject]
-    internal EconomySystem EconomySystem { get; set; }
+    [Inject] internal EconomySystem EconomySystem { get; set; }
 
-    public override async Task Reset(CancellationToken cancellation = new CancellationToken())
+    public override async Task Reset(CancellationToken cancellation = new())
     {
         await base.Reset(cancellation);
         TimeSystem.RegisterRepeatAction(
@@ -45,10 +45,7 @@ public sealed class RM2025ucLifeSystem : LifeSystem
 
     public bool TryBuyRevive(Identity id)
     {
-        if (!EntitySystem.TryGetOperatedEntity(id, out IHealthed h))
-        {
-            return false;
-        }
+        if (!EntitySystem.TryGetOperatedEntity(id, out IHealthed h)) return false;
 
         if (!h.IsDead())
             return false;
@@ -60,10 +57,7 @@ public sealed class RM2025ucLifeSystem : LifeSystem
             return false;
 
         var cost = CalcBuyReviveRequiredCoin(id);
-        if (!EconomySystem.TryDecreaseCoin(id.Camp, cost))
-        {
-            return false;
-        }
+        if (!EconomySystem.TryDecreaseCoin(id.Camp, cost)) return false;
 
         /*
          * 当通过使用金币兑换立即复活时：
@@ -184,19 +178,13 @@ public sealed class RM2025ucLifeSystem : LifeSystem
         {
             Camp.Red => Identity.RedBase,
             Camp.Blue => Identity.BlueBase,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
         var b = EntitySystem.Entities[baseId] as Base;
         var delta = 1;
-        if (SupplySystem.IsInSupplyZone(ZoneSystem, healthed.Id))
-        {
-            delta = 4;
-        }
+        if (SupplySystem.IsInSupplyZone(ZoneSystem, healthed.Id)) delta = 4;
 
-        if (b.IsArmorOpen)
-        {
-            delta = 4;
-        }
+        if (b.IsArmorOpen) delta = 4;
         SetRemainingReviveRequiredProgress(healthed.Id, Math.Max(0, remaining - delta));
     }
 

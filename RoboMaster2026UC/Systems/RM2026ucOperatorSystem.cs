@@ -27,7 +27,8 @@ public sealed class RM2026ucOperatorSystem(ICacheProvider<byte> byteCacheBox) : 
             byteCacheBox.WithWriterNamespace(id).Save(ControlModeCacheKey, (byte)mode);
             return true;
         }
-        else if (id.IsSentry() || id.IsHero())
+
+        if (id.IsSentry() || id.IsHero())
         {
             if (mode == ControlMode.AutoExchange)
                 return false;
@@ -42,17 +43,17 @@ public sealed class RM2026ucOperatorSystem(ICacheProvider<byte> byteCacheBox) : 
 public enum ControlMode : byte
 {
     /// <summary>
-    /// 手动控制
+    ///     手动控制
     /// </summary>
     Manual,
 
     /// <summary>
-    /// 半自动控制
+    ///     半自动控制
     /// </summary>
     SemiAuto,
 
     /// <summary>
-    /// 自动兑矿
+    ///     自动兑矿
     /// </summary>
-    AutoExchange,
+    AutoExchange
 }

@@ -11,17 +11,13 @@ namespace RoboSouls.JudgeSystem.RoboMaster2025UL;
 
 public sealed class RM2025ulJudgeSystem : JudgeSystem
 {
-    [Inject]
-    internal ILogger Logger { get; set; }
+    [Inject] internal ILogger Logger { get; set; }
 
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
+    [Inject] internal ITimeSystem TimeSystem { get; set; }
 
-    [Inject]
-    internal IEnumerable<ISystem> Systems { get; set; }
+    [Inject] internal IEnumerable<ISystem> Systems { get; set; }
 
-    [Inject]
-    internal ExperienceSystem ExperienceSystem { get; set; }
+    [Inject] internal ExperienceSystem ExperienceSystem { get; set; }
 
     public static void Build(IContainerBuilder builder)
     {
@@ -91,7 +87,7 @@ public sealed class RM2025ulJudgeSystem : JudgeSystem
         builder.Register<SettlementSystem>(Lifetime.Scoped).As<ISystem>().AsSelf();
     }
 
-    public override async Task StartAsync(CancellationToken cancellation = new CancellationToken())
+    public override async Task StartAsync(CancellationToken cancellation = new())
     {
         await base.StartAsync(cancellation);
 
@@ -102,7 +98,7 @@ public sealed class RM2025ulJudgeSystem : JudgeSystem
     }
 
     public override async Task Reset(
-        CancellationToken cancellation = new CancellationToken()
+        CancellationToken cancellation = new()
     )
     {
         base.Reset(cancellation);

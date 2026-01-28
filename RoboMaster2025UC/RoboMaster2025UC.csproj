@@ -10,14 +10,14 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Core\Core.csproj" />
+        <ProjectReference Include="..\Core\Core.csproj"/>
     </ItemGroup>
 
     <ItemGroup>
-      <Reference Include="VContainer">
-        <HintPath>..\Lib\VContainer.dll</HintPath>
-          <Private>false</Private>
-      </Reference>
+        <Reference Include="VContainer">
+            <HintPath>..\Lib\VContainer.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
     </ItemGroup>
 
 </Project>

@@ -6,25 +6,22 @@ using VContainer;
 namespace RoboSouls.JudgeSystem.RoboMaster2024UL.Systems;
 
 /// <summary>
-/// 经济自然增长
-/// 5:00 - 200
-/// 4:00 - 200
-/// 3:00 - 200
-/// 2:00 - 300
-/// 1:00 - 400
+///     经济自然增长
+///     5:00 - 200
+///     4:00 - 200
+///     3:00 - 200
+///     2:00 - 300
+///     1:00 - 400
 /// </summary>
 public sealed class EconomyNaturalSystem : ISystem
 {
-    [Inject]
-    internal EconomySystem EconomySystem { get; set; }
+    [Inject] internal EconomySystem EconomySystem { get; set; }
 
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
+    [Inject] internal ITimeSystem TimeSystem { get; set; }
 
-    [Inject]
-    internal ILogger Logger { get; set; }
+    [Inject] internal ILogger Logger { get; set; }
 
-    public Task Reset(CancellationToken cancellation = new CancellationToken())
+    public Task Reset(CancellationToken cancellation = new())
     {
         TimeSystem.RegisterOnceAction(JudgeSystemStage.Match, 0, () => BothSideAddMoney(200));
         TimeSystem.RegisterOnceAction(JudgeSystemStage.Match, 60, () => BothSideAddMoney(200));

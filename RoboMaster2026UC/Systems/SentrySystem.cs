@@ -10,7 +10,7 @@ using VitalRouter;
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 
 /// <summary>
-/// 哨兵机器人机制
+///     哨兵机器人机制
 /// </summary>
 [Routes]
 public sealed partial class SentrySystem(
@@ -21,15 +21,9 @@ public sealed partial class SentrySystem(
     LifeSystem lifeSystem)
     : ISystem
 {
-    [Inject]
-    internal void Inject(Router router)
-    {
-        MapTo(router);
-    }
-
     private static readonly int FreeAmmoAmountCacheKey = "free_ammo_amount".Sum();
 
-    public Task Reset(CancellationToken cancellation = new CancellationToken())
+    public Task Reset(CancellationToken cancellation = new())
     {
         timeSystem.RegisterOnceAction(
             JudgeSystemStage.Match,
@@ -57,13 +51,19 @@ public sealed partial class SentrySystem(
         return Task.CompletedTask;
     }
 
+    [Inject]
+    internal void Inject(Router router)
+    {
+        MapTo(router);
+    }
+
     private void AddSentryAmmo(Camp camp, int amount)
     {
         var id = camp switch
         {
             Camp.Red => Identity.RedSentry,
             Camp.Blue => Identity.BlueSentry,
-            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null)
         };
 
         if (!entitySystem.TryGetOperatedEntity(id, out Sentry s))
@@ -73,7 +73,7 @@ public sealed partial class SentrySystem(
     }
 
     /// <summary>
-    /// 占领补给区自动获取的允许发弹量
+    ///     占领补给区自动获取的允许发弹量
     /// </summary>
     /// <param name="camp"></param>
     /// <returns></returns>
@@ -83,7 +83,7 @@ public sealed partial class SentrySystem(
         {
             Camp.Red => Identity.RedSentry,
             Camp.Blue => Identity.BlueSentry,
-            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null)
         };
 
         if (!entitySystem.TryGetOperatedEntity(id, out Sentry s))
@@ -98,7 +98,7 @@ public sealed partial class SentrySystem(
         {
             Camp.Red => Identity.RedSentry,
             Camp.Blue => Identity.BlueSentry,
-            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null)
         };
 
         if (!entitySystem.TryGetOperatedEntity(id, out Sentry s))

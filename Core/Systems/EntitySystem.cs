@@ -17,16 +17,19 @@ public sealed class EntitySystem : ISystem
 
     public IReadOnlyDictionary<Identity, IEntity> Entities => _entities;
 
-    [Inject]
-    internal ICacheWriter<byte> OperatorCacheBoxWriter { get; set; }
+    [Inject] internal ICacheWriter<byte> OperatorCacheBoxWriter { get; set; }
 
-    [Inject]
-    internal ICacheReader<byte> OperatorCacheBox { get; set; }
+    [Inject] internal ICacheReader<byte> OperatorCacheBox { get; set; }
 
-    public bool HasOperator(in Identity id) =>
-        OperatorCacheBox.WithReaderNamespace(id).Exists(OperatorCacheKey);
+    public bool HasOperator(in Identity id)
+    {
+        return OperatorCacheBox.WithReaderNamespace(id).Exists(OperatorCacheKey);
+    }
 
-    public bool HasOperator(IEntity entity) => HasOperator(entity.Id);
+    public bool HasOperator(IEntity entity)
+    {
+        return HasOperator(entity.Id);
+    }
 
     public bool TryGetEntity<T>(in Identity id, out T entity)
         where T : IEntity
@@ -58,20 +61,14 @@ public sealed class EntitySystem : ISystem
 
     public void AssignOperator(in Identity id)
     {
-        if (!_entities.TryGetValue(id, out var entity) || entity is not IRobot robot)
-        {
-            return;
-        }
+        if (!_entities.TryGetValue(id, out var entity) || entity is not IRobot robot) return;
 
         OperatorCacheBoxWriter.WithWriterNamespace(id).Save(OperatorCacheKey, 1);
     }
 
     public void RemoveOperator(in Identity id)
     {
-        if (!_entities.TryGetValue(id, out var entity) || entity is not IRobot robot)
-        {
-            return;
-        }
+        if (!_entities.TryGetValue(id, out var entity) || entity is not IRobot robot) return;
 
         OperatorCacheBoxWriter.WithWriterNamespace(id).Delete(OperatorCacheKey);
     }

@@ -13,54 +13,40 @@ using VitalRouter;
 namespace RoboSouls.JudgeSystem.RoboMaster2025UC.Systems;
 
 /// <summary>
-/// 基地机制
+///     基地机制
 /// </summary>
 [Routes]
 public sealed partial class BaseSystem : ISystem
 {
-    [Inject]
-    internal void Inject(Router router)
-    {
-        MapTo(router);
-    }
+    /// <summary>
+    ///     红方基地增益点
+    /// </summary>
+    public static readonly Identity RedBaseZoneId = new(Camp.Red, 50);
 
     /// <summary>
-    /// 红方基地增益点
+    ///     蓝方基地增益点
     /// </summary>
-    public static readonly Identity RedBaseZoneId = new Identity(Camp.Red, 50);
-
-    /// <summary>
-    /// 蓝方基地增益点
-    /// </summary>
-    public static readonly Identity BlueBaseZoneId = new Identity(Camp.Blue, 50);
+    public static readonly Identity BlueBaseZoneId = new(Camp.Blue, 50);
 
     private static readonly int BaseZoneDeactivatedCacheKey = "BaseZoneDeactivated".Sum();
 
-    [Inject]
-    internal ICacheProvider<bool> BoolCacheBox { get; set; }
+    [Inject] internal ICacheProvider<bool> BoolCacheBox { get; set; }
 
-    [Inject]
-    internal LifeSystem LifeSystem { get; set; }
+    [Inject] internal LifeSystem LifeSystem { get; set; }
 
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
+    [Inject] internal EntitySystem EntitySystem { get; set; }
 
-    [Inject]
-    internal ICommandPublisher Publisher { get; set; }
+    [Inject] internal ICommandPublisher Publisher { get; set; }
 
-    [Inject]
-    internal BuffSystem BuffSystem { get; set; }
+    [Inject] internal BuffSystem BuffSystem { get; set; }
 
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
+    [Inject] internal ITimeSystem TimeSystem { get; set; }
 
-    [Inject]
-    internal JudgeBotSystem JudgeBotSystem { get; set; }
+    [Inject] internal JudgeBotSystem JudgeBotSystem { get; set; }
 
-    [Inject]
-    internal ZoneSystem ZoneSystem { get; set; }
+    [Inject] internal ZoneSystem ZoneSystem { get; set; }
 
-    public Task Reset(CancellationToken cancellation = new CancellationToken())
+    public Task Reset(CancellationToken cancellation = new())
     {
         var redBase = EntitySystem.Entities[Identity.RedBase] as Base;
         var blueBase = EntitySystem.Entities[Identity.BlueBase] as Base;
@@ -118,8 +104,14 @@ public sealed partial class BaseSystem : ISystem
         return Task.CompletedTask;
     }
 
+    [Inject]
+    internal void Inject(Router router)
+    {
+        MapTo(router);
+    }
+
     /// <summary>
-    /// 抢跑检测
+    ///     抢跑检测
     /// </summary>
     /// <param name="camp"></param>
     /// <returns></returns>
@@ -137,19 +129,17 @@ public sealed partial class BaseSystem : ISystem
                     .Where(i => i.Camp == camp)
                     .Where(i => !ZoneSystem.IsInZone(i, baseZone))
             )
-            {
                 JudgeBotSystem.Penalty(
                     Identity.Server,
                     robot,
                     PenaltyType.RedCard,
                     JudgeBotSystem.PenaltyReasonFalseStart
                 );
-            }
         };
     }
 
     /// <summary>
-    /// 比赛开始时，基地处于无敌状态。当一方前哨站被击毁，该方基地的无敌状态解除
+    ///     比赛开始时，基地处于无敌状态。当一方前哨站被击毁，该方基地的无敌状态解除
     /// </summary>
     /// <param name="evt"></param>
     [Route]
@@ -160,23 +150,19 @@ public sealed partial class BaseSystem : ISystem
 
         Base b;
         if (evt.Victim.Camp == Camp.Red)
-        {
             b = EntitySystem.Entities[Identity.RedBase] as Base;
-        }
         else
-        {
             b = EntitySystem.Entities[Identity.BlueBase] as Base;
-        }
 
         LifeSystem.SetInvincible(b, false);
     }
 
     /// <summary>
-    /// 基地增益点机制
-    /// 基地增益点只可由己方英雄、步兵、哨兵机器人占领。同一方的多台机器人可同时占领基地增益点。
-    /// 在七分钟比赛阶段， 占领己方基地增益点的机器人可获得 50%防御增益。
-    /// 占领己方基地增益点的机器人在比赛开始 2-3 分钟、 3-5 分钟、 5-7 分钟时分别可获得 2、 3、 5 倍射击热量
-    ///    冷却增益
+    ///     基地增益点机制
+    ///     基地增益点只可由己方英雄、步兵、哨兵机器人占领。同一方的多台机器人可同时占领基地增益点。
+    ///     在七分钟比赛阶段， 占领己方基地增益点的机器人可获得 50%防御增益。
+    ///     占领己方基地增益点的机器人在比赛开始 2-3 分钟、 3-5 分钟、 5-7 分钟时分别可获得 2、 3、 5 倍射击热量
+    ///     冷却增益
     /// </summary>
     /// <param name="evt"></param>
     [Route]
@@ -197,17 +183,15 @@ public sealed partial class BaseSystem : ISystem
             >= 120 and < 180 => 2,
             >= 180 and < 300 => 3,
             >= 300 => 5,
-            _ => 0,
+            _ => 0
         };
         if (cooldownBuffValue > 0)
-        {
             BuffSystem.AddBuff(
                 evt.OperatorId,
                 Buffs.CoolDownBuff,
                 cooldownBuffValue,
                 TimeSpan.MaxValue
             );
-        }
     }
 
     [Route]
@@ -231,7 +215,7 @@ public sealed partial class BaseSystem : ISystem
         {
             Camp.Red => Identity.RedBase,
             Camp.Blue => Identity.BlueBase,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
 
         var b = EntitySystem.Entities[baseId] as Base;

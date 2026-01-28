@@ -10,35 +10,24 @@ using VitalRouter;
 namespace RoboSouls.JudgeSystem.RoboMaster2025UC.Systems;
 
 /// <summary>
-/// 哨兵机器人机制
+///     哨兵机器人机制
 /// </summary>
 [Routes]
 public sealed partial class SentrySystem : ISystem
 {
-    [Inject]
-    internal void Inject(Router router)
-    {
-        MapTo(router);
-    }
-
     private static readonly int FreeAmmoAmountCacheKey = "free_ammo_amount".Sum();
 
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
+    [Inject] internal ITimeSystem TimeSystem { get; set; }
 
-    [Inject]
-    internal BattleSystem BattleSystem { get; set; }
+    [Inject] internal BattleSystem BattleSystem { get; set; }
 
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
+    [Inject] internal EntitySystem EntitySystem { get; set; }
 
-    [Inject]
-    internal ICacheProvider<int> IntCacheBox { get; set; }
+    [Inject] internal ICacheProvider<int> IntCacheBox { get; set; }
 
-    [Inject]
-    internal LifeSystem LifeSystem { get; set; }
+    [Inject] internal LifeSystem LifeSystem { get; set; }
 
-    public Task Reset(CancellationToken cancellation = new CancellationToken())
+    public Task Reset(CancellationToken cancellation = new())
     {
         TimeSystem.RegisterOnceAction(
             JudgeSystemStage.Match,
@@ -66,13 +55,19 @@ public sealed partial class SentrySystem : ISystem
         return Task.CompletedTask;
     }
 
+    [Inject]
+    internal void Inject(Router router)
+    {
+        MapTo(router);
+    }
+
     private void AddSentryAmmo(Camp camp, int amount)
     {
         var id = camp switch
         {
             Camp.Red => Identity.RedSentry,
             Camp.Blue => Identity.BlueSentry,
-            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null)
         };
 
         if (!EntitySystem.TryGetOperatedEntity(id, out Sentry s))
@@ -82,7 +77,7 @@ public sealed partial class SentrySystem : ISystem
     }
 
     /// <summary>
-    /// 占领补给区自动获取的允许发弹量
+    ///     占领补给区自动获取的允许发弹量
     /// </summary>
     /// <param name="camp"></param>
     /// <returns></returns>
@@ -92,7 +87,7 @@ public sealed partial class SentrySystem : ISystem
         {
             Camp.Red => Identity.RedSentry,
             Camp.Blue => Identity.BlueSentry,
-            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null)
         };
 
         if (!EntitySystem.TryGetOperatedEntity(id, out Sentry s))
@@ -107,7 +102,7 @@ public sealed partial class SentrySystem : ISystem
         {
             Camp.Red => Identity.RedSentry,
             Camp.Blue => Identity.BlueSentry,
-            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(camp), camp, null)
         };
 
         if (!EntitySystem.TryGetOperatedEntity(id, out Sentry s))

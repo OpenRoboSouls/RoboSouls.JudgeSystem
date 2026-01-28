@@ -1,4 +1,3 @@
-using System;
 using RoboSouls.JudgeSystem.Events;
 
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Events;

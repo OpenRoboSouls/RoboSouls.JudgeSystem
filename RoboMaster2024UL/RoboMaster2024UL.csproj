@@ -10,18 +10,18 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Reference Include="VContainer">
-        <HintPath>..\Lib\VContainer.dll</HintPath>
-          <Private>false</Private>
-      </Reference>
-      <Reference Include="VContainer.SourceGenerator">
-        <HintPath>..\Lib\VContainer.SourceGenerator.dll</HintPath>
-          <Private>false</Private>
-      </Reference>
+        <Reference Include="VContainer">
+            <HintPath>..\Lib\VContainer.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="VContainer.SourceGenerator">
+            <HintPath>..\Lib\VContainer.SourceGenerator.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Core\Core.csproj" />
+        <ProjectReference Include="..\Core\Core.csproj"/>
     </ItemGroup>
 
 </Project>

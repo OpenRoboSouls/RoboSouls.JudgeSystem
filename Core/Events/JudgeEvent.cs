@@ -8,5 +8,3 @@ public readonly record struct JudgePenaltyEvent(
     Identity JudgeId,
     byte Reason)
     : IJudgeSystemEvent<JudgePenaltyEvent>;
-    
-    

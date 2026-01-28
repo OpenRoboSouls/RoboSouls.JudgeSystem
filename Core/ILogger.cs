@@ -2,15 +2,15 @@
 
 public interface ILogger
 {
-    public void Log(LogLevel level, string message, params object[] args);
-
     public enum LogLevel
     {
         Debug,
         Info,
         Warning,
-        Error,
+        Error
     }
+
+    public void Log(LogLevel level, string message, params object[] args);
 }
 
 public static class LoggerExtensions

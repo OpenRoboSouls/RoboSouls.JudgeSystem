@@ -9,12 +9,12 @@ namespace RoboSouls.JudgeSystem.Systems;
 
 public abstract class OccupyZoneSystemBase : ISystem
 {
-    private readonly HashSet<Identity> _inZoneOperators = new HashSet<Identity>();
+    private readonly HashSet<Identity> _inZoneOperators = new();
     public abstract Identity ZoneId { get; }
 
     public Camp CurrentOccupier { get; private set; } = Camp.Spectator;
 
-    public virtual Task Reset(CancellationToken cancellation = new CancellationToken())
+    public virtual Task Reset(CancellationToken cancellation = new())
     {
         CurrentOccupier = Camp.Spectator;
         _inZoneOperators.Clear();
@@ -40,10 +40,7 @@ public abstract class OccupyZoneSystemBase : ISystem
             OnZoneOccupied(evt.OperatorId.Camp);
         }
 
-        if (CurrentOccupier == evt.OperatorId.Camp)
-        {
-            OnOccupierEnterZone(evt.OperatorId);
-        }
+        if (CurrentOccupier == evt.OperatorId.Camp) OnOccupierEnterZone(evt.OperatorId);
     }
 
     [Route]
@@ -79,10 +76,7 @@ public abstract class OccupyZoneSystemBase : ISystem
                     CurrentOccupier = _inZoneOperators.First().Camp;
                     OnZoneOccupied(CurrentOccupier);
 
-                    foreach (var operatorId in _inZoneOperators)
-                    {
-                        OnOccupierEnterZone(operatorId);
-                    }
+                    foreach (var operatorId in _inZoneOperators) OnOccupierEnterZone(operatorId);
                 }
             }
         }

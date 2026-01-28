@@ -13,31 +13,23 @@ public abstract class LifeSystem : ISystem
 {
     public const ushort KillReasonOverheat = 300;
 
-    [Inject]
-    protected ICommandPublisher Publisher { get; set; }
+    [Inject] protected ICommandPublisher Publisher { get; set; }
 
-    [Inject]
-    protected EntitySystem EntitySystem { get; set; }
+    [Inject] protected EntitySystem EntitySystem { get; set; }
 
-    [Inject]
-    protected PerformanceSystemBase PerformanceSystem { get; set; }
+    [Inject] protected PerformanceSystemBase PerformanceSystem { get; set; }
 
-    [Inject]
-    protected ICacheProvider<int> IntCacheBox { get; set; }
+    [Inject] protected ICacheProvider<int> IntCacheBox { get; set; }
 
-    [Inject]
-    protected ICacheWriter<uint> UIntCacheBox { get; set; }
+    [Inject] protected ICacheWriter<uint> UIntCacheBox { get; set; }
 
-    [Inject]
-    protected BuffSystem BuffSystem { get; set; }
+    [Inject] protected BuffSystem BuffSystem { get; set; }
 
-    [Inject]
-    protected ITimeSystem TimeSystem { get; set; }
+    [Inject] protected ITimeSystem TimeSystem { get; set; }
 
-    [Inject]
-    protected ILogger Logger { get; set; }
+    [Inject] protected ILogger Logger { get; set; }
 
-    public virtual Task Reset(CancellationToken cancellation = new CancellationToken())
+    public virtual Task Reset(CancellationToken cancellation = new())
     {
         return Task.WhenAll(
             EntitySystem
@@ -45,13 +37,9 @@ public abstract class LifeSystem : ISystem
                 .Select(e =>
                 {
                     if (EntitySystem.HasOperator(e.Id) || e is IBuilding)
-                    {
                         ResetHealth(e);
-                    }
                     else
-                    {
                         DecreaseHealth(e, Identity.Server, int.MaxValue);
-                    }
 
                     return Task.CompletedTask;
                 })
@@ -65,16 +53,13 @@ public abstract class LifeSystem : ISystem
     }
 
     /// <summary>
-    /// 尝试操作复活
+    ///     尝试操作复活
     /// </summary>
     /// <param name="healthed"></param>
     /// <returns></returns>
     public virtual bool TryRevive(in Identity healthed)
     {
-        if (!EntitySystem.TryGetOperatedEntity(healthed, out IHealthed h))
-        {
-            return false;
-        }
+        if (!EntitySystem.TryGetOperatedEntity(healthed, out IHealthed h)) return false;
 
         if (!h.IsDead())
             return false;
@@ -98,7 +83,7 @@ public abstract class LifeSystem : ISystem
     }
 
     /// <summary>
-    /// 减少生命值
+    ///     减少生命值
     /// </summary>
     /// <param name="healthed"></param>
     /// <param name="operatorId"></param>
@@ -107,29 +92,20 @@ public abstract class LifeSystem : ISystem
     public uint DecreaseHealth(IHealthed healthed, in Identity operatorId, uint value)
     {
         var currentHealth = healthed.Health;
-        if (currentHealth < value)
-        {
-            value = currentHealth;
-        }
+        if (currentHealth < value) value = currentHealth;
 
-        if (currentHealth <= 0)
-        {
-            return 0;
-        }
+        if (currentHealth <= 0) return 0;
 
         var newHealth = currentHealth - value;
 
         SetHealth(healthed, newHealth);
-        if (healthed.Health == 0)
-        {
-            OnKill(healthed, operatorId);
-        }
+        if (healthed.Health == 0) OnKill(healthed, operatorId);
 
         return value;
     }
 
     /// <summary>
-    /// 增加生命值
+    ///     增加生命值
     /// </summary>
     /// <param name="healthed"></param>
     /// <param name="value"></param>
@@ -152,10 +128,8 @@ public abstract class LifeSystem : ISystem
     protected void SetHealth(IHealthed healthed, uint value)
     {
         if (BuffSystem.TryGetBuff(healthed.Id, Buffs.RedCard, out Buff _))
-        {
             // 红牌状态下不允许设置生命值
             value = 0;
-        }
 
         value = Math.Clamp(value, 0, PerformanceSystem.GetMaxHealth(healthed));
 
@@ -177,10 +151,7 @@ public abstract class LifeSystem : ISystem
         if (value)
         {
             var duration = TimeSpan.MaxValue;
-            if (seconds > 0)
-            {
-                duration = TimeSpan.FromSeconds(seconds);
-            }
+            if (seconds > 0) duration = TimeSpan.FromSeconds(seconds);
             BuffSystem.AddBuff(healthed, Buffs.DefenceBuff, 1, duration);
         }
         else
@@ -189,9 +160,7 @@ public abstract class LifeSystem : ISystem
                 BuffSystem.TryGetBuff(healthed, Buffs.DefenceBuff, out Buff buff)
                 && buff.IsInfinite
             )
-            {
                 BuffSystem.RemoveBuff(healthed, Buffs.DefenceBuff);
-            }
         }
     }
 

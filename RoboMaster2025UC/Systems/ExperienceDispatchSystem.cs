@@ -9,39 +9,33 @@ using VitalRouter;
 namespace RoboSouls.JudgeSystem.RoboMaster2025UC.Systems;
 
 /// <summary>
-/// 经验值分发系统
+///     经验值分发系统
 /// </summary>
 [Routes]
 public sealed partial class ExperienceDispatchSystem : ISystem
 {
+    [Inject] internal ExperienceSystem ExperienceSystem { get; set; }
+
+    [Inject] internal EntitySystem EntitySystem { get; set; }
+
+    [Inject] internal ILogger Logger { get; set; }
+
+    [Inject] internal ITimeSystem TimeSystem { get; set; }
+
+    [Inject] internal RM2025ucPerformanceSystem PerformanceSystem { get; set; }
+
+    [Inject] internal LifeSystem LifeSystem { get; set; }
+
     [Inject]
     internal void Inject(Router router)
     {
         MapTo(router);
     }
 
-    [Inject]
-    internal ExperienceSystem ExperienceSystem { get; set; }
-
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
-
-    [Inject]
-    internal ILogger Logger { get; set; }
-
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
-
-    [Inject]
-    internal RM2025ucPerformanceSystem PerformanceSystem { get; set; }
-
-    [Inject]
-    internal LifeSystem LifeSystem { get; set; }
-
     /// <summary>
-    /// 发射弹丸
-    ///  步兵机器人：每发射 1 发弹丸，获得 1 点经验
-    ///  英雄机器人：每发射 1 发弹丸，获得 10 点经验
+    ///     发射弹丸
+    ///      步兵机器人：每发射 1 发弹丸，获得 1 点经验
+    ///      英雄机器人：每发射 1 发弹丸，获得 10 点经验
     /// </summary>
     /// <param name="shooter"></param>
     /// <param name="amount"></param>
@@ -52,17 +46,12 @@ public sealed partial class ExperienceDispatchSystem : ISystem
             return;
 
         if (command.Shooter is Hero h)
-        {
             ExperienceSystem.AddExp(h, command.Amount * 10);
-        }
-        else if (command.Shooter is Infantry r)
-        {
-            ExperienceSystem.AddExp(r, command.Amount);
-        }
+        else if (command.Shooter is Infantry r) ExperienceSystem.AddExp(r, command.Amount);
     }
 
     /// <summary>
-    /// 造成攻击伤害
+    ///     造成攻击伤害
     /// </summary>
     /// <param name="damageCommand"></param>
     [Route]
@@ -75,10 +64,7 @@ public sealed partial class ExperienceDispatchSystem : ISystem
 
         var deltaExp = 0;
         // 对机器人造成攻击伤害，每造成 1 点伤害，攻击方获得 4 点经验
-        if (damageCommand.Victim is IRobot)
-        {
-            deltaExp = (int)(damageCommand.Damage * 4);
-        }
+        if (damageCommand.Victim is IRobot) deltaExp = (int)(damageCommand.Damage * 4);
 
         // 对基地顶部大装甲模块造成17mm攻击伤害，每造成 1 点伤害，攻击方获得 2 点经验
         if (
@@ -86,34 +72,26 @@ public sealed partial class ExperienceDispatchSystem : ISystem
             && damageCommand.Victim is Base
             && damageCommand.ArmorId == 0
         )
-        {
             deltaExp = (int)(damageCommand.Damage * 2);
-        }
-        else if (damageCommand.Victim is Base or Outpost)
-        {
-            deltaExp = (int)damageCommand.Damage;
-        }
+        else if (damageCommand.Victim is Base or Outpost) deltaExp = (int)damageCommand.Damage;
 
         // 对基地、前哨造成42mm攻击伤害
-        if (damageCommand.AmmoType == PerformanceSystemBase.AmmoType42mm)
-        {
-            deltaExp = (int)damageCommand.Damage;
-        }
+        if (damageCommand.AmmoType == PerformanceSystemBase.AmmoType42mm) deltaExp = (int)damageCommand.Damage;
 
         ExperienceSystem.AddExp(shooter, deltaExp);
     }
 
     /// <summary>
-    /// 机器人战亡
-    ///  若击毁者为英雄机器人且导致战亡的伤害类型为 42mm 弹丸伤害：
-    /// > 当被击毁者等级大于等于击毁者等级时，经验计算方式如下：
+    ///     机器人战亡
+    ///      若击毁者为英雄机器人且导致战亡的伤害类型为 42mm 弹丸伤害：
+    ///     > 当被击毁者等级大于等于击毁者等级时，经验计算方式如下：
     ///     击毁者所获得的经验=50*被击毁者等级*（1+0.2*被击毁者与击毁者等级差）
-    /// > 当被击毁者等级小于击毁者等级时，被击毁者与击毁者等级差视为 0，经验计算方式如下：
+    ///     > 当被击毁者等级小于击毁者等级时，被击毁者与击毁者等级差视为 0，经验计算方式如下：
     ///     击毁者所获得的经验=50*被击毁者等级
-    ///  若导致战亡的伤害类型不为 42mm 弹丸伤害：
-    /// 击毁者等级视为另一方存活步兵机器人的平均经验所对应的等级。平均经验取
+    ///      若导致战亡的伤害类型不为 42mm 弹丸伤害：
+    ///     击毁者等级视为另一方存活步兵机器人的平均经验所对应的等级。平均经验取
     ///     四舍五入后的值。
-    /// 机器人因装甲模块被攻击外的其他原因导致变为非存活状态或裁判系统无法检测到
+    ///     机器人因装甲模块被攻击外的其他原因导致变为非存活状态或裁判系统无法检测到
     ///     击毁者时，均视为找不到击毁者。
     /// </summary>
     /// <param name="evt"></param>

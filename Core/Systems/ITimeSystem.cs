@@ -18,6 +18,7 @@ public interface ITimeSystem : ISystem
     public void SetStage(JudgeSystemStage stage);
     public void RegisterRepeatAction(double interval, Func<Task> action);
     public void RegisterOnceAction(double delay, Func<Task> action);
+
     public void RegisterOnceAction(
         JudgeSystemStage stage,
         double stageTime,
@@ -29,15 +30,9 @@ public static class TimeSystemExtension
 {
     public static string FormattedClockTime(this double time)
     {
-        if (time < 0)
-        {
-            return "00:00";
-        }
+        if (time < 0) return "00:00";
 
-        if (time >= 6000)
-        {
-            return "--:--";
-        }
+        if (time >= 6000) return "--:--";
 
         var minutes = Math.Floor(time / 60);
         var seconds = Math.Floor(time % 60);
@@ -47,6 +42,8 @@ public static class TimeSystemExtension
 
     extension(ITimeSystem timeSystem)
     {
+        public float TimeAsFloat => (float)timeSystem.Time;
+
         public void RegisterRepeatAction(double interval,
             Action action
         )
@@ -90,7 +87,5 @@ public static class TimeSystemExtension
                 }
             );
         }
-
-        public float TimeAsFloat => (float) timeSystem.Time;
     }
 }

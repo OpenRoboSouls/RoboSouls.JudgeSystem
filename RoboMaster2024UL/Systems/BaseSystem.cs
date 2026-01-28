@@ -9,30 +9,20 @@ using VitalRouter;
 namespace RoboSouls.JudgeSystem.RoboMaster2024UL.Systems;
 
 /// <summary>
-/// 基地机制
+///     基地机制
 /// </summary>
 [Routes]
 public sealed partial class BaseSystem : ISystem
 {
-    [Inject]
-    internal void Inject(Router router)
-    {
-        MapTo(router);
-    }
+    [Inject] internal ICacheWriter<uint> UintCacheBox { get; set; }
 
-    [Inject]
-    internal ICacheWriter<uint> UintCacheBox { get; set; }
+    [Inject] internal LifeSystem LifeSystem { get; set; }
 
-    [Inject]
-    internal LifeSystem LifeSystem { get; set; }
+    [Inject] internal EntitySystem EntitySystem { get; set; }
 
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
+    [Inject] internal ITimeSystem TimeSystem { get; set; }
 
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
-
-    public Task Reset(CancellationToken cancellation = new CancellationToken())
+    public Task Reset(CancellationToken cancellation = new())
     {
         var redBase = EntitySystem.Entities[Identity.RedBase] as Base;
         var blueBase = EntitySystem.Entities[Identity.BlueBase] as Base;
@@ -47,13 +37,19 @@ public sealed partial class BaseSystem : ISystem
         return Task.CompletedTask;
     }
 
+    [Inject]
+    internal void Inject(Router router)
+    {
+        MapTo(router);
+    }
+
     private void SetShield(Base b, uint shield)
     {
         UintCacheBox.WithWriterNamespace(b.Id).Save(Base.ShieldCacheKey, shield);
     }
 
     /// <summary>
-    /// 减少护盾值
+    ///     减少护盾值
     /// </summary>
     /// <param name="b"></param>
     /// <param name="delta"></param>
@@ -61,10 +57,7 @@ public sealed partial class BaseSystem : ISystem
     public uint DecreaseShield(Base b, uint delta)
     {
         var shield = b.Shield;
-        if (delta > shield)
-        {
-            delta = shield;
-        }
+        if (delta > shield) delta = shield;
 
         var newShield = shield - delta;
         SetShield(b, newShield);
@@ -73,8 +66,8 @@ public sealed partial class BaseSystem : ISystem
     }
 
     /// <summary>
-    /// 比赛过程中， 一方出现首次机器人战亡或被罚下时，该方基地的无敌状态解除， 基地虚拟护盾生效，
-    /// 若一方哨兵机器人战亡或被罚下， 该方基地无敌状态和虚拟护盾均失效。
+    ///     比赛过程中， 一方出现首次机器人战亡或被罚下时，该方基地的无敌状态解除， 基地虚拟护盾生效，
+    ///     若一方哨兵机器人战亡或被罚下， 该方基地无敌状态和虚拟护盾均失效。
     /// </summary>
     /// <param name="evt"></param>
     [Route]
@@ -85,13 +78,9 @@ public sealed partial class BaseSystem : ISystem
 
         Base b;
         if (evt.Victim.Camp == Camp.Red)
-        {
             b = EntitySystem.Entities[Identity.RedBase] as Base;
-        }
         else
-        {
             b = EntitySystem.Entities[Identity.BlueBase] as Base;
-        }
 
         RemoveInvincible(b);
 
@@ -115,7 +104,7 @@ public sealed partial class BaseSystem : ISystem
     }
 
     /// <summary>
-    /// 若一方哨兵机器人未上场，则比赛开始 1 分钟后，该方基地无敌状态和虚拟护盾均失效。
+    ///     若一方哨兵机器人未上场，则比赛开始 1 分钟后，该方基地无敌状态和虚拟护盾均失效。
     /// </summary>
     /// <returns></returns>
     private Task CheckSentryAbsent()
@@ -123,15 +112,9 @@ public sealed partial class BaseSystem : ISystem
         var redBase = EntitySystem.Entities[Identity.RedBase] as Base;
         var blueBase = EntitySystem.Entities[Identity.BlueBase] as Base;
 
-        if (!EntitySystem.HasOperator(Identity.RedSentry))
-        {
-            RemoveShield(redBase);
-        }
+        if (!EntitySystem.HasOperator(Identity.RedSentry)) RemoveShield(redBase);
 
-        if (!EntitySystem.HasOperator(Identity.BlueSentry))
-        {
-            RemoveShield(blueBase);
-        }
+        if (!EntitySystem.HasOperator(Identity.BlueSentry)) RemoveShield(blueBase);
 
         return Task.CompletedTask;
     }

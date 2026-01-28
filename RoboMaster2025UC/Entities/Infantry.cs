@@ -13,11 +13,14 @@ public sealed class Infantry(
 {
     public byte ChassisType =>
         byteCacheBox.WithReaderNamespace(Id).Load(IChassisd.ChassisTypeCacheKey);
+
     public int Experience => intCacheBox.WithReaderNamespace(Id).Load(IExperienced.ExpCacheKey);
 
     public uint Health => uintCacheBox.WithReaderNamespace(Id).Load(IHealthed.HealthCacheKey);
+
     public int AmmoAllowance =>
         intCacheBox.WithReaderNamespace(Id).Load(IShooter.AmmoAllowanceCacheKey);
+
     public float Heat => floatCacheBox.WithReaderNamespace(Id).Load(IShooter.HeatCacheKey);
     public byte AmmoType => PerformanceSystemBase.AmmoType17mm;
     public byte GunType => byteCacheBox.WithReaderNamespace(Id).Load(IShooter.GunTypeCacheKey);

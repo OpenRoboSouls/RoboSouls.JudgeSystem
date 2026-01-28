@@ -29,24 +29,16 @@ public static class CacheExtension
                 value = reader.Load(key);
                 return true;
             }
-            else
-            {
-                value = default;
-                return false;
-            }
-        
+
+            value = default;
+            return false;
         }
 
         public T LoadOrDefault(int key, T defaultValue)
         {
-            if (TryLoad(reader, key, out var value))
-            {
-                return value;
-            }
-            else
-            {
-                return defaultValue;
-            }
+            if (reader.TryLoad(key, out var value)) return value;
+
+            return defaultValue;
         }
 
         public ICacheReader<T> WithReaderNamespace(int mask)
@@ -81,7 +73,7 @@ public static class CacheExtension
 public enum CacheActionType : byte
 {
     Save,
-    Delete,
+    Delete
 }
 
 public struct CacheAction<T>
@@ -110,16 +102,16 @@ public class MaskedCacheProvider<T> : ICacheProvider<T>
     private static readonly ConcurrentDictionary<
         (ICacheReader<T>, int),
         MaskedCacheProvider<T>
-    > ReaderPool = new ConcurrentDictionary<(ICacheReader<T>, int), MaskedCacheProvider<T>>();
+    > ReaderPool = new();
 
     private static readonly ConcurrentDictionary<
         (ICacheWriter<T>, int),
         MaskedCacheProvider<T>
-    > WriterPool = new ConcurrentDictionary<(ICacheWriter<T>, int), MaskedCacheProvider<T>>();
+    > WriterPool = new();
 
     private readonly int _mask;
-    private readonly ICacheReader<T> _reader = null;
-    private readonly ICacheWriter<T> _writer = null;
+    private readonly ICacheReader<T> _reader;
+    private readonly ICacheWriter<T> _writer;
 
     private MaskedCacheProvider(ICacheReader<T> reader, int mask)
     {

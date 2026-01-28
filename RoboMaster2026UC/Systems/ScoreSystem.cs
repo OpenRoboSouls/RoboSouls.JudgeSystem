@@ -10,17 +10,11 @@ using VitalRouter;
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 
 /// <summary>
-/// 积分系统
+///     积分系统
 /// </summary>
 [Routes]
 public sealed partial class ScoreSystem(ICacheProvider<int> intCacheBox, EntitySystem entitySystem) : IScoreSystem
 {
-    [Inject]
-    internal void Inject(Router router)
-    {
-        MapTo(router);
-    }
-
     private static readonly int KillCountCacheKey = "KillCount".GetHashCode();
     private static readonly int DeathCountCacheKey = "DeathCount".GetHashCode();
 
@@ -32,7 +26,7 @@ public sealed partial class ScoreSystem(ICacheProvider<int> intCacheBox, EntityS
         return 0;
     }
 
-    public Task Reset(CancellationToken cancellation = new CancellationToken())
+    public Task Reset(CancellationToken cancellation = new())
     {
         return Task.WhenAll(
             entitySystem.Entities.Values.Select(e =>
@@ -42,6 +36,12 @@ public sealed partial class ScoreSystem(ICacheProvider<int> intCacheBox, EntityS
                 return Task.CompletedTask;
             })
         );
+    }
+
+    [Inject]
+    internal void Inject(Router router)
+    {
+        MapTo(router);
     }
 
     public int GetKillCount(Identity id)

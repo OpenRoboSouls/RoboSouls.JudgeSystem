@@ -5,7 +5,7 @@ using RoboSouls.JudgeSystem.RoboMaster2025UC.Systems;
 namespace RoboSouls.JudgeSystem.RoboMaster2025UC.Events;
 
 /// <summary>
-/// 飞镖发射站开启事件
+///     飞镖发射站开启事件
 /// </summary>
 public readonly struct DartStationOpenEvent
     : IJudgeSystemEvent<DartStationOpenEvent>,
@@ -47,7 +47,7 @@ public readonly struct DartStationOpenEvent
 }
 
 /// <summary>
-/// 飞镖发射站关闭事件
+///     飞镖发射站关闭事件
 /// </summary>
 public readonly struct DartStationCloseEvent
     : IJudgeSystemEvent<DartStationCloseEvent>,
@@ -87,7 +87,7 @@ public readonly struct DartStationCloseEvent
 }
 
 /// <summary>
-/// 飞镖命中
+///     飞镖命中
 /// </summary>
 public readonly struct DartHitEvent : IJudgeSystemEvent<DartHitEvent>, IEquatable<DartHitEvent>
 {
@@ -127,7 +127,7 @@ public readonly struct DartHitEvent : IJudgeSystemEvent<DartHitEvent>, IEquatabl
 }
 
 /// <summary>
-/// 飞镖发射事件
+///     飞镖发射事件
 /// </summary>
 public readonly struct DartLaunchEvent
     : IJudgeSystemEvent<DartLaunchEvent>,

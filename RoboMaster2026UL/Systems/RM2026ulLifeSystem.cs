@@ -10,11 +10,13 @@ namespace RoboSouls.JudgeSystem.RoboMaster2026UL.Systems;
 public sealed class RM2026ulLifeSystem : LifeSystem
 {
     private static readonly int ReviveProgressTotalCacheKey = "revive_progress_total".Sum();
+
     private static readonly int ReviveProgressRemainingCacheKey =
         "revive_progress_remaining".Sum();
+
     private static readonly int DeathCountCacheKey = "death_count".Sum();
 
-    public override async Task Reset(CancellationToken cancellation = new CancellationToken())
+    public override async Task Reset(CancellationToken cancellation = new())
     {
         await base.Reset(cancellation);
         TimeSystem.RegisterRepeatAction(

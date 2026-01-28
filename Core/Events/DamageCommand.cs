@@ -11,4 +11,3 @@ public readonly record struct DamageCommand(
     byte ArmorType,
     byte ArmorId)
     : ICommand;
-

@@ -11,21 +11,17 @@ namespace RoboSouls.JudgeSystem.Systems;
 
 public sealed class ExperienceSystem : ISystem
 {
-    [Inject]
-    internal ICacheWriter<int> IntCacheBox { get; set; }
+    [Inject] internal ICacheWriter<int> IntCacheBox { get; set; }
 
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
+    [Inject] internal EntitySystem EntitySystem { get; set; }
 
-    [Inject]
-    internal ICommandPublisher Publisher { get; set; }
+    [Inject] internal ICommandPublisher Publisher { get; set; }
 
-    [Inject]
-    internal PerformanceSystemBase PerformanceSystem { get; set; }
+    [Inject] internal PerformanceSystemBase PerformanceSystem { get; set; }
 
     public Action<IExperienced, int> OnExpChange { get; set; } = delegate { };
 
-    public Task Reset(CancellationToken cancellation = new CancellationToken())
+    public Task Reset(CancellationToken cancellation = new())
     {
         return Task.WhenAll(
             EntitySystem
@@ -42,10 +38,7 @@ public sealed class ExperienceSystem : ISystem
     {
         SetExp(experienced, experienced.Experience + exp);
 
-        if (!force)
-        {
-            OnExpChange(experienced, exp);
-        }
+        if (!force) OnExpChange(experienced, exp);
     }
 
     private void SetExp(IExperienced experienced, int exp)
@@ -54,9 +47,6 @@ public sealed class ExperienceSystem : ISystem
         IntCacheBox.WithWriterNamespace(experienced.Id).Save(IExperienced.ExpCacheKey, exp);
         var newLevel = PerformanceSystem.GetLevel(experienced);
 
-        if (oldLevel != newLevel)
-        {
-            Publisher.PublishAsync(new LevelUpdateEvent(experienced.Id, oldLevel, newLevel));
-        }
+        if (oldLevel != newLevel) Publisher.PublishAsync(new LevelUpdateEvent(experienced.Id, oldLevel, newLevel));
     }
 }

@@ -7,52 +7,41 @@ using VContainer;
 namespace RoboSouls.JudgeSystem.RoboMaster2024UL.Systems;
 
 /// <summary>
-/// 补给系统
+///     补给系统
 /// </summary>
 public sealed class SupplySystem : ISystem
 {
     public const ushort SupplyZoneId = 50;
-    public static readonly Identity RedSupplyZoneId = new Identity(Camp.Red, SupplyZoneId);
-    public static readonly Identity BlueSupplyZoneId = new Identity(Camp.Blue, SupplyZoneId);
-    private uint _blueSentryReviveAmountConsumed = 0;
+    public static readonly Identity RedSupplyZoneId = new(Camp.Red, SupplyZoneId);
+    public static readonly Identity BlueSupplyZoneId = new(Camp.Blue, SupplyZoneId);
+    private uint _blueSentryReviveAmountConsumed;
 
     // did not use cache provider because client does not need to know the value
-    private uint _redSentryReviveAmountConsumed = 0;
+    private uint _redSentryReviveAmountConsumed;
 
-    [Inject]
-    internal ILogger Logger { get; set; }
+    [Inject] internal ILogger Logger { get; set; }
 
-    [Inject]
-    internal ICacheProvider<uint> UintCacheBox { get; set; }
+    [Inject] internal ICacheProvider<uint> UintCacheBox { get; set; }
 
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
+    [Inject] internal EntitySystem EntitySystem { get; set; }
 
-    [Inject]
-    internal ZoneSystem ZoneSystem { get; set; }
+    [Inject] internal ZoneSystem ZoneSystem { get; set; }
 
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
+    [Inject] internal ITimeSystem TimeSystem { get; set; }
 
-    [Inject]
-    internal EconomySystem EconomySystem { get; set; }
+    [Inject] internal EconomySystem EconomySystem { get; set; }
 
-    [Inject]
-    internal BattleSystem BattleSystem { get; set; }
+    [Inject] internal BattleSystem BattleSystem { get; set; }
 
-    [Inject]
-    internal BuffSystem BuffSystem { get; set; }
+    [Inject] internal BuffSystem BuffSystem { get; set; }
 
-    [Inject]
-    internal PerformanceSystemBase aPerformanceSystemBase { get; set; }
+    [Inject] internal PerformanceSystemBase aPerformanceSystemBase { get; set; }
 
-    [Inject]
-    internal LifeSystem LifeSystem { get; set; }
+    [Inject] internal LifeSystem LifeSystem { get; set; }
 
-    [Inject]
-    internal ModuleSystemBase ModuleSystem { get; set; }
+    [Inject] internal ModuleSystemBase ModuleSystem { get; set; }
 
-    public Task Reset(CancellationToken cancellation = new CancellationToken())
+    public Task Reset(CancellationToken cancellation = new())
     {
         TimeSystem.RegisterRepeatAction(1, SupplyUpdateLoop);
 
@@ -73,15 +62,9 @@ public sealed class SupplySystem : ISystem
         )
             return false;
 
-        if (entity.Camp == Camp.Red)
-        {
-            return ZoneSystem.IsInZone(entity, RedSupplyZoneId);
-        }
+        if (entity.Camp == Camp.Red) return ZoneSystem.IsInZone(entity, RedSupplyZoneId);
 
-        if (entity.Camp == Camp.Blue)
-        {
-            return ZoneSystem.IsInZone(entity, BlueSupplyZoneId);
-        }
+        if (entity.Camp == Camp.Blue) return ZoneSystem.IsInZone(entity, BlueSupplyZoneId);
 
         return false;
     }
@@ -92,7 +75,7 @@ public sealed class SupplySystem : ISystem
         {
             PerformanceSystemBase.AmmoType17mm => 1,
             PerformanceSystemBase.AmmoType42mm => 15,
-            _ => int.MaxValue,
+            _ => int.MaxValue
         };
     }
 
@@ -117,10 +100,7 @@ public sealed class SupplySystem : ISystem
         if (!CheckCanBuy(shooter.Id.Camp, shooter.AmmoType, amount, out var cost))
             return;
 
-        if (!EconomySystem.TryDecreaseCoin(shooter.Id.Camp, cost))
-        {
-            return;
-        }
+        if (!EconomySystem.TryDecreaseCoin(shooter.Id.Camp, cost)) return;
 
         BattleSystem.SetAmmoAllowance(shooter, shooter.AmmoAllowance + amount);
     }
@@ -140,9 +120,9 @@ public sealed class SupplySystem : ISystem
     }
 
     /// <summary>
-    /// 英雄、步兵机器人： 占领己方补给区时，可以以每秒 10%上限血量的速度回血。若机器人处于脱战状态，
-    /// 该数值将提升至 25%。
-    /// 哨兵机器人： 比赛开始后至第 4 分钟（即倒计时 4:59-1:00），占领己方补给区后，将以每秒 100 点血量
+    ///     英雄、步兵机器人： 占领己方补给区时，可以以每秒 10%上限血量的速度回血。若机器人处于脱战状态，
+    ///     该数值将提升至 25%。
+    ///     哨兵机器人： 比赛开始后至第 4 分钟（即倒计时 4:59-1:00），占领己方补给区后，将以每秒 100 点血量
     ///     的速度回血。以此种方式累计恢复的血量最高为 600。
     /// </summary>
     /// <returns></returns>

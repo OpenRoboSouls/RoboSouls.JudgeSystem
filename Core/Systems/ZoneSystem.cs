@@ -7,20 +7,19 @@ using VitalRouter;
 namespace RoboSouls.JudgeSystem.Systems;
 
 /// <summary>
-/// translate zone event to buff handle
-///
-/// local only
+///     translate zone event to buff handle
+///     local only
 /// </summary>
 [Routes]
 public sealed partial class ZoneSystem : ISystem
 {
+    private readonly Dictionary<Identity, HashSet<Identity>> _entityInZones = new();
+
     [Inject]
     internal void Inject(Router router)
     {
         MapTo(router);
     }
-
-    private readonly Dictionary<Identity, HashSet<Identity>> _entityInZones = new();
 
     public HashSet<Identity> GetInZones(in Identity id)
     {
@@ -30,10 +29,7 @@ public sealed partial class ZoneSystem : ISystem
     [Route]
     private void OnEnterZone(EnterZoneEvent evt)
     {
-        if (IsInZone(evt.OperatorId, evt.ZoneId))
-        {
-            return;
-        }
+        if (IsInZone(evt.OperatorId, evt.ZoneId)) return;
         if (!_entityInZones.TryGetValue(evt.OperatorId, out var zones))
         {
             zones = new HashSet<Identity>();
@@ -46,10 +42,7 @@ public sealed partial class ZoneSystem : ISystem
     [Route]
     private void OnExitZone(ExitZoneEvent evt)
     {
-        if (_entityInZones.TryGetValue(evt.OperatorId, out var zones))
-        {
-            zones.Remove(evt.ZoneId);
-        }
+        if (_entityInZones.TryGetValue(evt.OperatorId, out var zones)) zones.Remove(evt.ZoneId);
     }
 
     public bool IsInZone(in Identity entity, in Identity zoneId)

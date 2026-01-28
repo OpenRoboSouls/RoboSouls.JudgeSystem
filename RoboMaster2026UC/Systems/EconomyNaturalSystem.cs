@@ -5,16 +5,15 @@ using RoboSouls.JudgeSystem.Systems;
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 
 /// <summary>
-/// 经济自然增长
-///
-/// 比赛倒计时 红方 蓝方
-/// 06:59 400（初始） 400（初始）
-/// 05:59 50 50
-/// 04:59 50 50
-/// 03:59 50 50
-/// 03:59 50 50
-/// 01:59 50 50
-/// 00:59 150 150
+///     经济自然增长
+///     比赛倒计时 红方 蓝方
+///     06:59 400（初始） 400（初始）
+///     05:59 50 50
+///     04:59 50 50
+///     03:59 50 50
+///     03:59 50 50
+///     01:59 50 50
+///     00:59 150 150
 /// </summary>
 public sealed class EconomyNaturalSystem(
     EconomySystem economySystem,
@@ -23,7 +22,7 @@ public sealed class EconomyNaturalSystem(
     IMatchConfigurationRM2026uc matchConfiguration)
     : ISystem
 {
-    public Task Reset(CancellationToken cancellation = new CancellationToken())
+    public Task Reset(CancellationToken cancellation = new())
     {
         timeSystem.RegisterOnceAction(
             JudgeSystemStage.Match,

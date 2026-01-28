@@ -6,22 +6,20 @@ using VitalRouter;
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 
 /// <summary>
-/// 地形跨越增益点（公路）
+///     地形跨越增益点（公路）
 /// </summary>
 [Routes]
-public sealed partial class RoadTerrainLeapZoneSystem(ITimeSystem timeSystem, ICacheProvider<double> doubleCacheBox, BuffSystem buffSystem) : TerrainLeapZoneSystem(timeSystem, doubleCacheBox, buffSystem)
+public sealed partial class RoadTerrainLeapZoneSystem(
+    ITimeSystem timeSystem,
+    ICacheProvider<double> doubleCacheBox,
+    BuffSystem buffSystem) : TerrainLeapZoneSystem(timeSystem, doubleCacheBox, buffSystem)
 {
-    [Inject]
-    internal void Inject(Router router)
-    {
-        MapTo(router);
-    }
-
-    public static readonly Identity RoadTerrainLeapTriggerZoneId = new Identity(
+    public static readonly Identity RoadTerrainLeapTriggerZoneId = new(
         Camp.Judge,
         130
     );
-    public static readonly Identity RoadTerrainLeapActivationZoneId = new Identity(
+
+    public static readonly Identity RoadTerrainLeapActivationZoneId = new(
         Camp.Judge,
         140
     );
@@ -31,7 +29,15 @@ public sealed partial class RoadTerrainLeapZoneSystem(ITimeSystem timeSystem, IC
     public override int MaxActivationTime => 3;
     public override int BuffDuration => 5;
 
-    protected override void OnActivationStart(in Identity operatorId) { }
+    [Inject]
+    internal void Inject(Router router)
+    {
+        MapTo(router);
+    }
+
+    protected override void OnActivationStart(in Identity operatorId)
+    {
+    }
 
     protected override void OnActivationSuccess(in Identity operatorId, double activationTime)
     {
@@ -40,10 +46,7 @@ public sealed partial class RoadTerrainLeapZoneSystem(ITimeSystem timeSystem, IC
         //     益，持续时间为 5 秒
         //      同一机器人在获得地形跨越增益（公路）后的 15 秒内，不能重复获得地形跨越增益（公路）
         base.OnActivationSuccess(operatorId, activationTime);
-        if (buffSystem.TryGetBuff(operatorId, RM2026ucBuffs.TerrainLeapRoadBuff, out Buff _))
-        {
-            return;
-        }
+        if (buffSystem.TryGetBuff(operatorId, RM2026ucBuffs.TerrainLeapRoadBuff, out Buff _)) return;
 
         buffSystem.AddBuff(
             operatorId,
@@ -57,18 +60,16 @@ public sealed partial class RoadTerrainLeapZoneSystem(ITimeSystem timeSystem, IC
             >= 120 and < 180 => 2,
             >= 180 and < 300 => 3,
             >= 300 and < 420 => 5,
-            _ => 0,
+            _ => 0
         };
 
         if (cooldownBuffValue > 0)
-        {
             buffSystem.AddBuff(
                 operatorId,
                 Buffs.CoolDownBuff,
                 cooldownBuffValue,
                 TimeSpan.FromSeconds(BuffDuration)
             );
-        }
 
         buffSystem.AddBuff(
             operatorId,

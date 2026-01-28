@@ -9,7 +9,7 @@ using RoboSouls.JudgeSystem.Systems;
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 
 /// <summary>
-/// 雷达机制
+///     雷达机制
 /// </summary>
 public sealed class RadarSystem(
     ITimeSystem timeSystem,
@@ -20,7 +20,18 @@ public sealed class RadarSystem(
     EntitySystem entitySystem)
     : ISystem
 {
-    public Task Reset(CancellationToken cancellation = new CancellationToken())
+    private static readonly int MarkProgressCacheKey = "MarkProgress".Sum();
+    private static readonly int MarkProgressDeltaCacheKey = "MarkProgressDelta".Sum();
+
+    private static readonly int DoubleVulnerableChanceGainCacheKey =
+        "DoubleVulnerableChanceGain".Sum();
+
+    private static readonly int DoubleVulnerableChanceConsumedCacheKey =
+        "DoubleVulnerableChanceConsumed".Sum();
+
+    private readonly Dictionary<Identity, Mark> _lastMark = new();
+
+    public Task Reset(CancellationToken cancellation = new())
     {
         timeSystem.RegisterRepeatAction(0.5f, RadarScanTask);
         _lastMark.Clear();
@@ -47,8 +58,6 @@ public sealed class RadarSystem(
         );
     }
 
-    private readonly Dictionary<Identity, Mark> _lastMark = new();
-
     private Task RadarScanUpdateTaskFor(in Identity id)
     {
         var mark = radarBrain.OnRadarScan(id);
@@ -59,35 +68,23 @@ public sealed class RadarSystem(
         {
             case Mark.Accurate:
                 if (lastMark is Mark.Accurate or Mark.SemiAccurate)
-                {
                     x += 1f;
-                }
                 else
-                {
                     x = 1f;
-                }
 
                 break;
             case Mark.SemiAccurate:
                 if (lastMark is Mark.Accurate or Mark.SemiAccurate)
-                {
                     x += 0.5f;
-                }
                 else
-                {
                     x = 0.5f;
-                }
 
                 break;
             case Mark.Wrong:
                 if (lastMark is Mark.Accurate or Mark.SemiAccurate)
-                {
                     x = -0.8f;
-                }
                 else
-                {
                     x -= 0.8f;
-                }
 
                 break;
         }
@@ -98,9 +95,6 @@ public sealed class RadarSystem(
 
         return Task.CompletedTask;
     }
-
-    private static readonly int MarkProgressCacheKey = "MarkProgress".Sum();
-    private static readonly int MarkProgressDeltaCacheKey = "MarkProgressDelta".Sum();
 
     public float GetMarkProgress(in Identity id)
     {
@@ -115,17 +109,13 @@ public sealed class RadarSystem(
         {
             // 易伤效果
             if (!buffSystem.TryGetBuff(id, RM2026ucBuffs.Vulnerable, out Buff buff))
-            {
                 buffSystem.AddBuff(id, RM2026ucBuffs.Vulnerable, 0.15f, TimeSpan.MaxValue);
-            }
             else if (timeSystem.Time - buff.Value > 60)
-            {
                 // 持续60秒添加双倍易伤机会
                 SetDoubleVulnerableChanceGained(
                     id.Camp,
                     GetDoubleVulnerableChanceGained(id.Camp) + 1
                 );
-            }
         }
         else
         {
@@ -144,11 +134,6 @@ public sealed class RadarSystem(
     {
         floatCacheBox.WithWriterNamespace(id).Save(MarkProgressDeltaCacheKey, delta);
     }
-
-    private static readonly int DoubleVulnerableChanceGainCacheKey =
-        "DoubleVulnerableChanceGain".Sum();
-    private static readonly int DoubleVulnerableChanceConsumedCacheKey =
-        "DoubleVulnerableChanceConsumed".Sum();
 
     private int GetDoubleVulnerableChanceGained(Camp camp)
     {
@@ -179,7 +164,7 @@ public sealed class RadarSystem(
     }
 
     /// <summary>
-    /// 剩余双倍易伤机会
+    ///     剩余双倍易伤机会
     /// </summary>
     /// <param name="camp"></param>
     /// <returns></returns>
@@ -195,7 +180,7 @@ public sealed class RadarSystem(
     }
 
     /// <summary>
-    /// 发动双倍易伤
+    ///     发动双倍易伤
     /// </summary>
     /// <param name="camp"></param>
     /// <returns></returns>
@@ -212,14 +197,12 @@ public sealed class RadarSystem(
             .Where(h => buffSystem.TryGetBuff(h.Id, RM2026ucBuffs.Vulnerable, out Buff _));
 
         foreach (var healthed in targets)
-        {
             buffSystem.AddBuff(
                 healthed.Id,
                 RM2026ucBuffs.Vulnerable,
                 0.3f,
                 TimeSpan.FromSeconds(30)
             );
-        }
 
         return true;
     }
@@ -239,5 +222,5 @@ public enum Mark : byte
     SemiAccurate,
 
     // 错误
-    Wrong,
+    Wrong
 }

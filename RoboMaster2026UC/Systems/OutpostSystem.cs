@@ -13,15 +13,13 @@ using VitalRouter;
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 
 /// <summary>
-/// 前哨站机制
-///
-/// 比赛开始后，中部装甲开始旋转，旋转 5 秒内达到 0.8π rad/s 的速度，
-/// 随后保持匀速转动，方向随机。每局比赛中，红蓝双方的前哨站旋转方向保持一致且固定不变。
-///
-/// 当满足以下任意条件时，一方前哨站装甲停止旋转：
-///  该方前哨站被击毁
-///  对方基地护甲展开
-///  比赛开始 3 分钟后
+///     前哨站机制
+///     比赛开始后，中部装甲开始旋转，旋转 5 秒内达到 0.8π rad/s 的速度，
+///     随后保持匀速转动，方向随机。每局比赛中，红蓝双方的前哨站旋转方向保持一致且固定不变。
+///     当满足以下任意条件时，一方前哨站装甲停止旋转：
+///      该方前哨站被击毁
+///      对方基地护甲展开
+///      比赛开始 3 分钟后
 /// </summary>
 [Routes]
 public sealed partial class OutpostSystem(
@@ -36,17 +34,14 @@ public sealed partial class OutpostSystem(
     : ISystem
 {
     public const ushort OutpostZoneId = 100;
-    public static readonly Identity RedOutpostZoneId = new Identity(Camp.Red, OutpostZoneId);
-    public static readonly Identity BlueOutpostZoneId = new Identity(Camp.Blue, OutpostZoneId);
+    public static readonly Identity RedOutpostZoneId = new(Camp.Red, OutpostZoneId);
+    public static readonly Identity BlueOutpostZoneId = new(Camp.Blue, OutpostZoneId);
     private static readonly int OutpostZoneDeactivatedCacheKey = "OutpostZoneDeactivated".Sum();
 
-    [Inject]
-    internal void Inject(Router router)
-    {
-        MapTo(router);
-    }
+    [Property(nameof(boolCacheBox), PropertyStorageMode.Camp)]
+    public partial bool OutpostZoneDeactivated { get; internal set; }
 
-    public Task Reset(CancellationToken cancellation = new CancellationToken())
+    public Task Reset(CancellationToken cancellation = new())
     {
         timeSystem.RegisterOnceAction(
             JudgeSystemStage.Match,
@@ -75,6 +70,12 @@ public sealed partial class OutpostSystem(
         return Task.CompletedTask;
     }
 
+    [Inject]
+    internal void Inject(Router router)
+    {
+        MapTo(router);
+    }
+
     private void StartOutpost(Camp camp, bool clockwise)
     {
         SetRotateDirection(camp, clockwise);
@@ -84,10 +85,7 @@ public sealed partial class OutpostSystem(
     [Route]
     private void OnKill(KillEvent evt)
     {
-        if (evt.Victim.IsOutpost())
-        {
-            SetRotateSpeed(evt.Victim.Camp, 0);
-        }
+        if (evt.Victim.IsOutpost()) SetRotateSpeed(evt.Victim.Camp, 0);
     }
 
     [Route]
@@ -102,7 +100,7 @@ public sealed partial class OutpostSystem(
         {
             Camp.Red => Identity.RedOutpost,
             Camp.Blue => Identity.BlueOutpost,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
 
         boolCacheBox.WithWriterNamespace(id).Save(Outpost.RotateClockwiseCacheKey, isClockwise);
@@ -110,36 +108,26 @@ public sealed partial class OutpostSystem(
 
     private void SetRotateSpeed(Camp camp, float speed)
     {
-        if (speed < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(speed));
-        }
+        if (speed < 0) throw new ArgumentOutOfRangeException(nameof(speed));
 
         var id = camp switch
         {
             Camp.Red => Identity.RedOutpost,
             Camp.Blue => Identity.BlueOutpost,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
 
         var outpost = entitySystem.Entities[id] as Outpost;
-        if (outpost.RotateSpeed == speed)
-        {
-            return;
-        }
+        if (outpost.RotateSpeed == speed) return;
 
         floatCacheBox.WithWriterNamespace(id).Save(Outpost.RotateSpeedCacheKey, speed);
 
         if (speed > 0)
-        {
             commandPublisher.PublishAsync(
                 new OutpostRotateStartEvent(camp, outpost.IsRotateClockwise, speed)
             );
-        }
         else
-        {
             commandPublisher.PublishAsync(new OutpostRotateStopEvent(camp));
-        }
     }
 
     [Route]
@@ -153,32 +141,28 @@ public sealed partial class OutpostSystem(
             return;
         if (IsOutpostDestroyed(evt.OperatorId.Camp, out _))
         {
-            buffSystem.AddBuff(evt.OperatorId, RM2026ucBuffs.RebuildingOutpost, timeSystem.TimeAsFloat, TimeSpan.MaxValue);
-            return;
-        } 
-        
-        if (GetOutpostZoneDeactivated(evt.OperatorId.Camp))
-        {
+            buffSystem.AddBuff(evt.OperatorId, RM2026ucBuffs.RebuildingOutpost, timeSystem.TimeAsFloat,
+                TimeSpan.MaxValue);
             return;
         }
+
+        if (GetOutpostZoneDeactivated(evt.OperatorId.Camp)) return;
 
         var cooldownBuffValue = timeSystem.StageTimeElapsed switch
         {
             >= 120 and < 180 => 2,
             >= 180 and < 300 => 3,
             >= 300 => 5,
-            _ => 0,
+            _ => 0
         };
         if (cooldownBuffValue > 0)
-        {
             buffSystem.AddBuff(
                 evt.OperatorId,
                 Buffs.CoolDownBuff,
                 cooldownBuffValue,
                 TimeSpan.MaxValue
             );
-        }
-            
+
         buffSystem.RemoveBuff(evt.OperatorId, RM2026ucBuffs.WeakenedBuff);
     }
 
@@ -189,17 +173,11 @@ public sealed partial class OutpostSystem(
             return;
         if (evt.OperatorId.Camp != evt.ZoneId.Camp)
             return;
-        
+
         buffSystem.RemoveBuff(evt.OperatorId, RM2026ucBuffs.RebuildingOutpost);
 
-        if (timeSystem.Stage == JudgeSystemStage.Match)
-        {
-            buffSystem.RemoveBuff(evt.OperatorId, Buffs.CoolDownBuff);
-        }
+        if (timeSystem.Stage == JudgeSystemStage.Match) buffSystem.RemoveBuff(evt.OperatorId, Buffs.CoolDownBuff);
     }
-
-    [Property(nameof(boolCacheBox), PropertyStorageMode.Camp)]
-    public partial bool OutpostZoneDeactivated { get; internal set; }
 
     public bool IsOutpostDestroyed(Camp camp, out Outpost outpost)
     {

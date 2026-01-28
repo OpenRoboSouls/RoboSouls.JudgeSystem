@@ -12,8 +12,8 @@ public class Base : IBuilding, IHealthed
         Id = id;
     }
 
-    [Inject]
-    internal ICacheReader<uint> UintCacheBox { get; set; }
+    [Inject] internal ICacheReader<uint> UintCacheBox { get; set; }
+
     public uint Shield => UintCacheBox.WithReaderNamespace(Id).Load(ShieldCacheKey);
 
     public Identity Id { get; }

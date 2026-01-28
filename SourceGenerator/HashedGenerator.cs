@@ -8,39 +8,25 @@ using SourceGenerator.Utils;
 namespace SourceGenerator;
 
 [Generator]
-public class HashedGenerator: IIncrementalGenerator
+public class HashedGenerator : IIncrementalGenerator
 {
-    private struct HashContext
-    {
-        public string NamespaceName;
-        public string ClassName;
-        public string PropertyName;
-        public string Accessibility;
-    }
-
     private const string AttributeName = "Hashed";
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var provider = context.SyntaxProvider
             .CreateSyntaxProvider(
-                predicate: Predicate,
-                transform: GetSemanticTarget);
+                Predicate,
+                GetSemanticTarget);
 
         context.RegisterSourceOutput(provider, Execute);
     }
 
     private static bool Predicate(SyntaxNode node, CancellationToken cancellationToken)
     {
-        if (node is not PropertyDeclarationSyntax p)
-        {
-            return false;
-        }
+        if (node is not PropertyDeclarationSyntax p) return false;
 
-        if (p.AttributeLists.Count == 0)
-        {
-            return false;
-        }
+        if (p.AttributeLists.Count == 0) return false;
 
         return p.AttributeLists.Any(al => al.Attributes.Any(a => a.Name.ToString() == AttributeName));
     }
@@ -51,37 +37,22 @@ public class HashedGenerator: IIncrementalGenerator
         var attribute = p.AttributeLists.SelectMany(al => al.Attributes)
             .FirstOrDefault(a => context.SemanticModel.GetTypeInfo(a).Type?.Name == AttributeName);
 
-        if (attribute == null)
-        {
-            return null;
-        }
-        
+        if (attribute == null) return null;
+
         var symbol = context.SemanticModel.GetDeclaredSymbol(context.Node);
-        if (symbol == null)
-        {
-            return null;
-        }
+        if (symbol == null) return null;
 
         var propertyName = p.Identifier.ValueText;
         var className = symbol.ContainingType.Name;
         var ns = symbol.ContainingNamespace.ToString();
         var accessibility = new HashSet<string> { symbol.DeclaredAccessibility.ToString().ToLower() };
 
-        if (symbol.IsStatic)
-        {
-            accessibility.Add("static");
-        }
+        if (symbol.IsStatic) accessibility.Add("static");
 
-        if (symbol.IsVirtual)
-        {
-            accessibility.Add("virtual");
-        }
+        if (symbol.IsVirtual) accessibility.Add("virtual");
 
-        if (symbol.IsOverride)
-        {
-            accessibility.Add("override");
-        }
-        
+        if (symbol.IsOverride) accessibility.Add("override");
+
         return new HashContext
         {
             NamespaceName = ns,
@@ -93,10 +64,7 @@ public class HashedGenerator: IIncrementalGenerator
 
     private static void Execute(SourceProductionContext spc, HashContext? target)
     {
-        if (target == null)
-        {
-            return;
-        }
+        if (target == null) return;
 
         var value = target.Value;
         var hash = Hash.HashCode(value.PropertyName);
@@ -114,5 +82,13 @@ public class HashedGenerator: IIncrementalGenerator
                      """;
 
         spc.AddSource($"{value.ClassName}.{value.PropertyName}.g.cs", code);
+    }
+
+    private struct HashContext
+    {
+        public string NamespaceName;
+        public string ClassName;
+        public string PropertyName;
+        public string Accessibility;
     }
 }

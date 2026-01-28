@@ -3,7 +3,7 @@
 public interface IShooter : IEntity
 {
     /// <summary>
-    /// 允许发弹量
+    ///     允许发弹量
     /// </summary>
     /// <returns></returns>
     public static readonly int AmmoAllowanceCacheKey = "ammo_allowance".Sum();

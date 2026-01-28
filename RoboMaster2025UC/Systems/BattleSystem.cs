@@ -13,63 +13,43 @@ using VitalRouter;
 namespace RoboSouls.JudgeSystem.RoboMaster2025UC.Systems;
 
 /// <summary>
-/// 射击、伤害、热量系统
+///     射击、伤害、热量系统
 /// </summary>
 [Routes]
 public sealed partial class BattleSystem : IBattleSystem
 {
-    [Inject]
-    internal void Inject(Router router)
-    {
-        MapTo(router);
-    }
-
     private static readonly int RedDamageSumCacheKey = "RedDamageSum".GetHashCode();
     private static readonly int BlueDamageSumCacheKey = "BlueDamageSum".GetHashCode();
 
-    [Inject]
-    internal ICommandPublisher Publisher { get; set; }
+    [Inject] internal ICommandPublisher Publisher { get; set; }
 
-    [Inject]
-    internal ICacheProvider<int> AmmoBox { get; set; }
+    [Inject] internal ICacheProvider<int> AmmoBox { get; set; }
 
-    [Inject]
-    internal LifeSystem LifeSystem { get; set; }
+    [Inject] internal LifeSystem LifeSystem { get; set; }
 
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
+    [Inject] internal ITimeSystem TimeSystem { get; set; }
 
-    [Inject]
-    internal RM2025ucPerformanceSystem PerformanceSystem { get; set; }
+    [Inject] internal RM2025ucPerformanceSystem PerformanceSystem { get; set; }
 
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
+    [Inject] internal EntitySystem EntitySystem { get; set; }
 
-    [Inject]
-    internal ILogger Logger { get; set; }
+    [Inject] internal ILogger Logger { get; set; }
 
-    [Inject]
-    internal BuffSystem BuffSystem { get; set; }
+    [Inject] internal BuffSystem BuffSystem { get; set; }
 
-    [Inject]
-    internal BaseSystem BaseSystem { get; set; }
+    [Inject] internal BaseSystem BaseSystem { get; set; }
 
-    [Inject]
-    internal ICacheWriter<int> IntCacheBox { get; set; }
+    [Inject] internal ICacheWriter<int> IntCacheBox { get; set; }
 
-    [Inject]
-    internal ICacheWriter<float> FloatCacheBox { get; set; }
+    [Inject] internal ICacheWriter<float> FloatCacheBox { get; set; }
 
-    [Inject]
-    internal ICacheProvider<uint> UintCacheBox { get; set; }
+    [Inject] internal ICacheProvider<uint> UintCacheBox { get; set; }
 
-    [Inject]
-    internal HeroSystem HeroSystem { get; set; }
+    [Inject] internal HeroSystem HeroSystem { get; set; }
 
-    [Inject]
-    internal ModuleSystem ModuleSystem { get; set; }
+    [Inject] internal ModuleSystem ModuleSystem { get; set; }
 
-    public Task Reset(CancellationToken cancellation = new CancellationToken())
+    public Task Reset(CancellationToken cancellation = new())
     {
         TimeSystem.RegisterRepeatAction(0.1, CooldownTask);
 
@@ -78,10 +58,7 @@ public sealed partial class BattleSystem : IBattleSystem
 
     public bool TryShoot(IShooter shooter, int count)
     {
-        if (shooter.AmmoAllowance <= -3)
-        {
-            return false;
-        }
+        if (shooter.AmmoAllowance <= -3) return false;
 
         // 允许一定超发
         SetAmmoAllowance(shooter, shooter.AmmoAllowance - count);
@@ -91,89 +68,6 @@ public sealed partial class BattleSystem : IBattleSystem
         Publisher.PublishAsync(new ShootCommand(shooter, count));
 
         return true;
-    }
-
-    private Task CooldownTask()
-    {
-        return Task.WhenAll(
-            EntitySystem
-                .Entities.Values.OfType<IShooter>()
-                .Where(EntitySystem.HasOperator)
-                .Select(CooldownTaskFor)
-        );
-    }
-
-    /// <summary>
-    /// 热量冷却结算 10Hz
-    /// 枪口热量按 10Hz 的频率结算冷却，每个检测周期热量冷却值 = 每秒
-    /// 冷却值 / 10。
-    /// </summary>
-    /// <param name="shooter"></param>
-    private Task CooldownTaskFor(IShooter shooter)
-    {
-        if (shooter is IHealthed h)
-        {
-            if (h.IsDead())
-            {
-                SetHeat(shooter, 0);
-                return Task.CompletedTask;
-            }
-        }
-
-        var cooldown = PerformanceSystem.GetCooldown(shooter);
-        var cooldownDelta = (float)cooldown / 10;
-        if (BuffSystem.TryGetBuff(shooter.Id, Buffs.CoolDownBuff, out float cooldownBuff))
-        {
-            if (
-                BuffSystem.TryGetBuff(
-                    shooter.Id,
-                    Buffs.CoolDownAmountBuff,
-                    out float cooldownAmount
-                )
-                && cooldownDelta + cooldownAmount > cooldownDelta * cooldownBuff
-            )
-            {
-                cooldownDelta += cooldownAmount;
-            }
-            else
-            {
-                cooldownDelta *= cooldownBuff;
-            }
-        }
-
-        var q1 = shooter.Heat;
-        var q0 = PerformanceSystem.GetMaxHeat(shooter);
-        var q2 = GetQ2(shooter, q0);
-        // A. 若 Q2 > Q1 > Q0，该机器人对应操作手电脑的第一视角可视度降低且发射机构锁定。 直到 Q1 = 0， 第一视角才会恢复正常，解锁发射机构
-        // 若 Q1 > Q2 则全部时间发射机构锁定不再解锁
-        if (q1 > q2)
-        {
-            BuffSystem.AddBuff(shooter.Id, RM2025ucBuffs.HeatGunLocked, 2, TimeSpan.MaxValue);
-        }
-
-        if (q1 > q0)
-        {
-            ModuleSystem.SetFpvVisibilityReduced(shooter.Id, true);
-            BuffSystem.AddBuff(shooter.Id, RM2025ucBuffs.HeatGunLocked, 1, TimeSpan.MaxValue);
-        }
-
-        // if (MathF.Approximately(q1, 0))
-        if (MathF.Abs(q1 - 0) < 0.001f)
-        {
-            ModuleSystem.SetFpvVisibilityReduced(shooter.Id, false);
-            if (
-                !BuffSystem.TryGetBuff(shooter.Id, RM2025ucBuffs.HeatGunLocked, out float v)
-                // || MathF.Approximately(v, 1)
-                || MathF.Abs(v - 1) < 0.001f
-            )
-            {
-                BuffSystem.RemoveBuff(shooter.Id, RM2025ucBuffs.HeatGunLocked);
-            }
-        }
-
-        SetHeat(shooter, q1 - cooldownDelta);
-
-        return Task.CompletedTask;
     }
 
     public void OnArmorHit(
@@ -197,15 +91,10 @@ public sealed partial class BattleSystem : IBattleSystem
             buffDamageFactor *= 1 - defenceBuff;
         }
 
-        if (BuffSystem.TryGetBuff(attacker, Buffs.AttackBuff, out float attackBuff))
-        {
-            buffDamageFactor *= attackBuff;
-        }
+        if (BuffSystem.TryGetBuff(attacker, Buffs.AttackBuff, out float attackBuff)) buffDamageFactor *= attackBuff;
 
         if (BuffSystem.TryGetBuff(victimId, RM2025ucBuffs.Vulnerable, out float vulnerable))
-        {
             buffDamageFactor *= 1 + vulnerable;
-        }
 
         if (buffDamageFactor <= 0)
             return;
@@ -224,7 +113,7 @@ public sealed partial class BattleSystem : IBattleSystem
 
                     // 42mm => 基地飞镖检测模块
                     2 => 200,
-                    _ => throw new ArgumentOutOfRangeException(),
+                    _ => throw new ArgumentOutOfRangeException()
                 };
                 if (
                     HeroSystem.IsDeploymentMode(attacker)
@@ -241,13 +130,9 @@ public sealed partial class BattleSystem : IBattleSystem
                         HeroSystem.IsDeploymentMode(attacker)
                         && HeroSystem.CanDeploymentHit(attacker)
                     )
-                    {
                         damage = 60;
-                    }
                     else
-                    {
                         damage = 40;
-                    }
                 }
 
                 break;
@@ -257,10 +142,7 @@ public sealed partial class BattleSystem : IBattleSystem
                 break;
             case PerformanceSystemBase.AmmoType42mm:
             {
-                if (victim is Outpost)
-                {
-                    damage = 200;
-                }
+                if (victim is Outpost) damage = 200;
 
                 break;
             }
@@ -277,7 +159,7 @@ public sealed partial class BattleSystem : IBattleSystem
                     // 17mm => 基地飞镖检测模块
                     2 => 0,
 
-                    _ => throw new ArgumentOutOfRangeException(),
+                    _ => throw new ArgumentOutOfRangeException()
                 };
                 break;
             case PerformanceSystemBase.AmmoType17mm when victim is IRobot:
@@ -293,14 +175,10 @@ public sealed partial class BattleSystem : IBattleSystem
                     {
                         // 旋转中
                         if (o.RotateSpeed > 0)
-                        {
                             damage = 10;
-                        }
                         // 静止中
                         else
-                        {
                             damage = 5;
-                        }
                     }
                     // 17mm => 前哨站飞镖检测模块
                     else if (armorId == 1)
@@ -321,14 +199,90 @@ public sealed partial class BattleSystem : IBattleSystem
         damage = LifeSystem.DecreaseHealth(victim, attacker, damage);
 
         if (EntitySystem.TryGetEntity(attacker, out IShooter shooter))
-        {
             Publisher.PublishAsync(
                 new DamageCommand(shooter, victim, damage, ammoType, armorType, armorId)
             );
-        }
 
         // damage sum
         AddDamageSum(attacker.Camp, damage);
+    }
+
+    [Inject]
+    internal void Inject(Router router)
+    {
+        MapTo(router);
+    }
+
+    private Task CooldownTask()
+    {
+        return Task.WhenAll(
+            EntitySystem
+                .Entities.Values.OfType<IShooter>()
+                .Where(EntitySystem.HasOperator)
+                .Select(CooldownTaskFor)
+        );
+    }
+
+    /// <summary>
+    ///     热量冷却结算 10Hz
+    ///     枪口热量按 10Hz 的频率结算冷却，每个检测周期热量冷却值 = 每秒
+    ///     冷却值 / 10。
+    /// </summary>
+    /// <param name="shooter"></param>
+    private Task CooldownTaskFor(IShooter shooter)
+    {
+        if (shooter is IHealthed h)
+            if (h.IsDead())
+            {
+                SetHeat(shooter, 0);
+                return Task.CompletedTask;
+            }
+
+        var cooldown = PerformanceSystem.GetCooldown(shooter);
+        var cooldownDelta = (float)cooldown / 10;
+        if (BuffSystem.TryGetBuff(shooter.Id, Buffs.CoolDownBuff, out float cooldownBuff))
+        {
+            if (
+                BuffSystem.TryGetBuff(
+                    shooter.Id,
+                    Buffs.CoolDownAmountBuff,
+                    out float cooldownAmount
+                )
+                && cooldownDelta + cooldownAmount > cooldownDelta * cooldownBuff
+            )
+                cooldownDelta += cooldownAmount;
+            else
+                cooldownDelta *= cooldownBuff;
+        }
+
+        var q1 = shooter.Heat;
+        var q0 = PerformanceSystem.GetMaxHeat(shooter);
+        var q2 = GetQ2(shooter, q0);
+        // A. 若 Q2 > Q1 > Q0，该机器人对应操作手电脑的第一视角可视度降低且发射机构锁定。 直到 Q1 = 0， 第一视角才会恢复正常，解锁发射机构
+        // 若 Q1 > Q2 则全部时间发射机构锁定不再解锁
+        if (q1 > q2) BuffSystem.AddBuff(shooter.Id, RM2025ucBuffs.HeatGunLocked, 2, TimeSpan.MaxValue);
+
+        if (q1 > q0)
+        {
+            ModuleSystem.SetFpvVisibilityReduced(shooter.Id, true);
+            BuffSystem.AddBuff(shooter.Id, RM2025ucBuffs.HeatGunLocked, 1, TimeSpan.MaxValue);
+        }
+
+        // if (MathF.Approximately(q1, 0))
+        if (MathF.Abs(q1 - 0) < 0.001f)
+        {
+            ModuleSystem.SetFpvVisibilityReduced(shooter.Id, false);
+            if (
+                !BuffSystem.TryGetBuff(shooter.Id, RM2025ucBuffs.HeatGunLocked, out float v)
+                // || MathF.Approximately(v, 1)
+                || MathF.Abs(v - 1) < 0.001f
+            )
+                BuffSystem.RemoveBuff(shooter.Id, RM2025ucBuffs.HeatGunLocked);
+        }
+
+        SetHeat(shooter, q1 - cooldownDelta);
+
+        return Task.CompletedTask;
     }
 
     [Route]
@@ -338,7 +292,7 @@ public sealed partial class BattleSystem : IBattleSystem
         {
             Camp.Red => DartSystem.RedDartStationId,
             Camp.Blue => DartSystem.BlueDartStationId,
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException()
         };
 
         if (evt.Target == DartTarget.Outpost)
@@ -347,7 +301,7 @@ public sealed partial class BattleSystem : IBattleSystem
             {
                 Camp.Red => Identity.BlueOutpost,
                 Camp.Blue => Identity.RedOutpost,
-                _ => throw new ArgumentOutOfRangeException(),
+                _ => throw new ArgumentOutOfRangeException()
             };
 
             var outpost = EntitySystem.Entities[outpostId] as Outpost;
@@ -377,7 +331,7 @@ public sealed partial class BattleSystem : IBattleSystem
             {
                 Camp.Red => Identity.BlueBase,
                 Camp.Blue => Identity.RedBase,
-                _ => throw new ArgumentOutOfRangeException(),
+                _ => throw new ArgumentOutOfRangeException()
             };
 
             var b = EntitySystem.Entities[baseId] as Base;
@@ -396,7 +350,7 @@ public sealed partial class BattleSystem : IBattleSystem
                 DartTarget.RandomFixed when b.Health > 2000 => 625,
                 DartTarget.RandomFixed => 125,
                 DartTarget.RandomMoving => 1200,
-                _ => throw new ArgumentOutOfRangeException(),
+                _ => throw new ArgumentOutOfRangeException()
             };
 
             damage = (uint)(damage * buffDamageFactor);
@@ -421,7 +375,7 @@ public sealed partial class BattleSystem : IBattleSystem
         return shooter.AmmoType switch
         {
             PerformanceSystemBase.AmmoType17mm => q0 + 100f,
-            PerformanceSystemBase.AmmoType42mm => q0 + 200f,
+            PerformanceSystemBase.AmmoType42mm => q0 + 200f
         };
     }
 
@@ -433,7 +387,7 @@ public sealed partial class BattleSystem : IBattleSystem
     }
 
     /// <summary>
-    /// 更新热量数据
+    ///     更新热量数据
     /// </summary>
     /// <param name="shooter"></param>
     /// <param name="q1"></param>

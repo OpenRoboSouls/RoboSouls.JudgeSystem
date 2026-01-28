@@ -7,40 +7,37 @@ using VitalRouter;
 namespace RoboSouls.JudgeSystem.RoboMaster2025UC.Systems;
 
 /// <summary>
-/// 地形跨越点机制
+///     地形跨越点机制
 /// </summary>
 public abstract class TerrainLeapZoneSystem : ISystem
 {
     private static readonly int ActivationTimeKey = "activation_time".Sum();
 
     /// <summary>
-    /// 触发区域ID，机器人进入此区域时开始跨越判定
+    ///     触发区域ID，机器人进入此区域时开始跨越判定
     /// </summary>
     public abstract Identity TriggerZoneId { get; }
 
     /// <summary>
-    /// 激活区域ID，机器人在此区域内完成跨越判定
+    ///     激活区域ID，机器人在此区域内完成跨越判定
     /// </summary>
     public abstract Identity ActivationZoneId { get; }
 
     /// <summary>
-    /// 激活判定最大时间
+    ///     激活判定最大时间
     /// </summary>
     public abstract int MaxActivationTime { get; }
 
     /// <summary>
-    /// 增益持续时间
+    ///     增益持续时间
     /// </summary>
     public abstract int BuffDuration { get; }
 
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
+    [Inject] internal ITimeSystem TimeSystem { get; set; }
 
-    [Inject]
-    internal ICacheProvider<double> DoubleCacheBox { get; set; }
+    [Inject] internal ICacheProvider<double> DoubleCacheBox { get; set; }
 
-    [Inject]
-    internal BuffSystem BuffSystem { get; set; }
+    [Inject] internal BuffSystem BuffSystem { get; set; }
 
     protected abstract void OnActivationStart(in Identity operatorId);
 
@@ -48,14 +45,12 @@ public abstract class TerrainLeapZoneSystem : ISystem
     {
         // 在机器人已有任意地形跨越增益时，再一次获得地形跨越增益，机器人将获得 50%的防御增益
         if (BuffSystem.TryGetBuff(operatorId, RM2025ucBuffs.TerrainLeapBuff, out Buff _))
-        {
             BuffSystem.AddBuff(
                 operatorId,
                 Buffs.DefenceBuff,
                 0.5f,
                 TimeSpan.FromSeconds(BuffDuration)
             );
-        }
 
         BuffSystem.AddBuff(
             operatorId,
@@ -77,10 +72,7 @@ public abstract class TerrainLeapZoneSystem : ISystem
         {
             var activationTime =
                 TimeSystem.StageTimeElapsed - GetActivationTime(evt.OperatorId);
-            if (activationTime <= MaxActivationTime)
-            {
-                OnActivationSuccess(evt.OperatorId, activationTime);
-            }
+            if (activationTime <= MaxActivationTime) OnActivationSuccess(evt.OperatorId, activationTime);
         }
     }
 

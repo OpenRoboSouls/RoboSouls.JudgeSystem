@@ -11,61 +11,47 @@ using VitalRouter;
 namespace RoboSouls.JudgeSystem.RoboMaster2024UL.Systems;
 
 /// <summary>
-/// 射击、伤害、热量系统
+///     射击、伤害、热量系统
 /// </summary>
 public sealed class BattleSystem : IBattleSystem
 {
     private static readonly int RedDamageSumCacheKey = "RedDamageSum".GetHashCode();
     private static readonly int BlueDamageSumCacheKey = "BlueDamageSum".GetHashCode();
 
-    [Inject]
-    internal ICommandPublisher Publisher { get; set; }
+    [Inject] internal ICommandPublisher Publisher { get; set; }
 
-    [Inject]
-    internal ICacheProvider<int> AmmoBox { get; set; }
+    [Inject] internal ICacheProvider<int> AmmoBox { get; set; }
 
-    [Inject]
-    internal LifeSystem LifeSystem { get; set; }
+    [Inject] internal LifeSystem LifeSystem { get; set; }
 
-    [Inject]
-    internal ITimeSystem TimeSystem { get; set; }
+    [Inject] internal ITimeSystem TimeSystem { get; set; }
 
-    [Inject]
-    internal RM2024ulPerformanceSystem PerformanceSystem { get; set; }
+    [Inject] internal RM2024ulPerformanceSystem PerformanceSystem { get; set; }
 
-    [Inject]
-    internal EntitySystem EntitySystem { get; set; }
+    [Inject] internal EntitySystem EntitySystem { get; set; }
 
-    [Inject]
-    internal ILogger Logger { get; set; }
+    [Inject] internal ILogger Logger { get; set; }
 
-    [Inject]
-    internal BuffSystem BuffSystem { get; set; }
+    [Inject] internal BuffSystem BuffSystem { get; set; }
 
-    [Inject]
-    internal BaseSystem BaseSystem { get; set; }
+    [Inject] internal BaseSystem BaseSystem { get; set; }
 
-    [Inject]
-    internal ICacheWriter<int> IntCacheBox { get; set; }
+    [Inject] internal ICacheWriter<int> IntCacheBox { get; set; }
 
-    [Inject]
-    internal ICacheWriter<float> FloatCacheBox { get; set; }
+    [Inject] internal ICacheWriter<float> FloatCacheBox { get; set; }
 
-    [Inject]
-    internal ICacheProvider<uint> UintCacheBox { get; set; }
+    [Inject] internal ICacheProvider<uint> UintCacheBox { get; set; }
 
-    [Inject]
-    internal ModuleSystem ModuleSystem { get; set; }
+    [Inject] internal ModuleSystem ModuleSystem { get; set; }
 
-    [Inject]
-    internal CentralZoneSystem CentralZoneSystem { get; set; }
+    [Inject] internal CentralZoneSystem CentralZoneSystem { get; set; }
 
     internal Action<IShooter, IHealthed, uint> OnDamage { get; set; } = delegate { };
 
     // use delegate instead of event to avoid redundant routing
     internal Action<IShooter, int> OnShoot { get; set; } = delegate { };
 
-    public Task Reset(CancellationToken cancellation = new CancellationToken())
+    public Task Reset(CancellationToken cancellation = new())
     {
         TimeSystem.RegisterRepeatAction(0.1, CooldownTask);
 
@@ -74,10 +60,7 @@ public sealed class BattleSystem : IBattleSystem
 
     public bool TryShoot(IShooter shooter, int count)
     {
-        if (shooter.AmmoAllowance <= -3)
-        {
-            return false;
-        }
+        if (shooter.AmmoAllowance <= -3) return false;
 
         // 允许一定超发
         SetAmmoAllowance(shooter, shooter.AmmoAllowance - count);
@@ -86,52 +69,6 @@ public sealed class BattleSystem : IBattleSystem
         OnShoot(shooter, count);
 
         return true;
-    }
-
-    private Task CooldownTask()
-    {
-        return Task.WhenAll(
-            EntitySystem
-                .Entities.Values.OfType<IShooter>()
-                .Where(EntitySystem.HasOperator)
-                .Select(CooldownTaskFor)
-        );
-    }
-
-    /// <summary>
-    /// 热量冷却结算 10Hz
-    /// 枪口热量按 10Hz 的频率结算冷却，每个检测周期热量冷却值 = 每秒
-    /// 冷却值 / 10。
-    /// </summary>
-    /// <param name="shooter"></param>
-    private Task CooldownTaskFor(IShooter shooter)
-    {
-        var cooldown = PerformanceSystem.GetCooldown(shooter);
-        var cooldownDelta = (float)cooldown / 10;
-
-        var q1 = shooter.Heat;
-        var q0 = PerformanceSystem.GetMaxHeat(shooter);
-        // A. 若 Q1 > Q0，该机器人对应操作手电脑的第一视角可视度降低。 直到 Q1 ≤ Q0， 第一视角才会恢复正
-        if (q1 > q0)
-        {
-            ModuleSystem.SetFpvVisibilityReduced(shooter.Id, true);
-        }
-        else
-        {
-            ModuleSystem.SetFpvVisibilityReduced(shooter.Id, false);
-        }
-
-        // B. 若 2Q0 > Q1 > Q0，每 100 ms 扣除血量 = ((Q1 - Q0) / 250) / 10 * 上限血量。扣血后结算冷却。
-        if (q1 > q0 && q1 < 2 * q0 && shooter is IHealthed healthed)
-        {
-            var maxHealth = PerformanceSystem.GetMaxHealth(healthed);
-            var damage = (uint)((q1 - q0) / 250 / 10 * maxHealth);
-            LifeSystem.DecreaseHealth(healthed, Identity.Server, damage);
-        }
-
-        SetHeat(shooter, q1 - cooldownDelta);
-
-        return Task.CompletedTask;
     }
 
     public void OnArmorHit(
@@ -168,10 +105,8 @@ public sealed class BattleSystem : IBattleSystem
             case PerformanceSystemBase.AmmoType42mm:
             {
                 if (victim is IRobot)
-                {
                     // 42mm 对机器人伤害
                     damage = 100;
-                }
 
                 break;
             }
@@ -182,10 +117,8 @@ public sealed class BattleSystem : IBattleSystem
             case PerformanceSystemBase.AmmoType17mm:
             {
                 if (victim is IRobot)
-                {
                     // 17mm 对机器人伤害
                     damage = 10;
-                }
 
                 break;
             }
@@ -198,28 +131,61 @@ public sealed class BattleSystem : IBattleSystem
 
         // shoot base
         if (victim is Base { Shield: > 0 } b)
-        {
             damage = BaseSystem.DecreaseShield(b, damage);
-        }
         else
-        {
             damage = LifeSystem.DecreaseHealth(victim, attacker, damage);
-        }
 
         if (EntitySystem.TryGetEntity(attacker, out IShooter shooter))
             OnDamage(shooter, victim, damage);
 
         // damage sum
         if (attacker.Camp == Camp.Red)
-        {
             SetRedDamageSum(GetRedDamageSum() + damage);
-        }
-        else if (attacker.Camp == Camp.Blue)
-        {
-            SetBlueDamageSum(GetBlueDamageSum() + damage);
-        }
+        else if (attacker.Camp == Camp.Blue) SetBlueDamageSum(GetBlueDamageSum() + damage);
 
         CentralZoneSystem.OnCentralZoneHit(victimId, ammoType);
+    }
+
+    private Task CooldownTask()
+    {
+        return Task.WhenAll(
+            EntitySystem
+                .Entities.Values.OfType<IShooter>()
+                .Where(EntitySystem.HasOperator)
+                .Select(CooldownTaskFor)
+        );
+    }
+
+    /// <summary>
+    ///     热量冷却结算 10Hz
+    ///     枪口热量按 10Hz 的频率结算冷却，每个检测周期热量冷却值 = 每秒
+    ///     冷却值 / 10。
+    /// </summary>
+    /// <param name="shooter"></param>
+    private Task CooldownTaskFor(IShooter shooter)
+    {
+        var cooldown = PerformanceSystem.GetCooldown(shooter);
+        var cooldownDelta = (float)cooldown / 10;
+
+        var q1 = shooter.Heat;
+        var q0 = PerformanceSystem.GetMaxHeat(shooter);
+        // A. 若 Q1 > Q0，该机器人对应操作手电脑的第一视角可视度降低。 直到 Q1 ≤ Q0， 第一视角才会恢复正
+        if (q1 > q0)
+            ModuleSystem.SetFpvVisibilityReduced(shooter.Id, true);
+        else
+            ModuleSystem.SetFpvVisibilityReduced(shooter.Id, false);
+
+        // B. 若 2Q0 > Q1 > Q0，每 100 ms 扣除血量 = ((Q1 - Q0) / 250) / 10 * 上限血量。扣血后结算冷却。
+        if (q1 > q0 && q1 < 2 * q0 && shooter is IHealthed healthed)
+        {
+            var maxHealth = PerformanceSystem.GetMaxHealth(healthed);
+            var damage = (uint)((q1 - q0) / 250 / 10 * maxHealth);
+            LifeSystem.DecreaseHealth(healthed, Identity.Server, damage);
+        }
+
+        SetHeat(shooter, q1 - cooldownDelta);
+
+        return Task.CompletedTask;
     }
 
     public void SetAmmoAllowance(IShooter shooter, int ammoAllowance)
@@ -230,7 +196,7 @@ public sealed class BattleSystem : IBattleSystem
     }
 
     /// <summary>
-    /// 更新热量数据
+    ///     更新热量数据
     /// </summary>
     /// <param name="shooter"></param>
     /// <param name="q1"></param>

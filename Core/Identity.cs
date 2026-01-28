@@ -7,19 +7,6 @@ namespace RoboSouls.JudgeSystem;
 
 public readonly record struct Identity
 {
-    private readonly byte _data;
-    public Camp Camp => (Camp)(_data >> 6);
-    public ushort Id => (ushort)(_data & 0x3F);
-    
-    private Identity(byte data)
-    {
-        _data = data;
-    }
-    
-    public Identity(Camp camp, ushort id) : this((byte)(((byte)camp << 6) | (id & 0x3F)))
-    {
-    }
-
     public const ushort HeroId = 1;
     public const ushort EngineerId = 2;
     public const ushort InfantryId1 = 3;
@@ -30,50 +17,65 @@ public readonly record struct Identity
     public const ushort OutpostId = 8;
     public const ushort BaseId = 9;
 
-    public static readonly Identity RedHero = new Identity(Camp.Red, 1);
-    public static readonly Identity RedEngineer = new Identity(Camp.Red, 2);
-    public static readonly Identity RedInfantry1 = new Identity(Camp.Red, 3);
-    public static readonly Identity RedInfantry2 = new Identity(Camp.Red, 4);
-    public static readonly Identity RedInfantry3 = new Identity(Camp.Red, 5);
-    public static readonly Identity RedAerial = new Identity(Camp.Red, 6);
-    public static readonly Identity RedSentry = new Identity(Camp.Red, 7);
-    public static readonly Identity RedOutpost = new Identity(Camp.Red, 8);
-    public static readonly Identity RedBase = new Identity(Camp.Red, 9);
+    public static readonly Identity RedHero = new(Camp.Red, 1);
+    public static readonly Identity RedEngineer = new(Camp.Red, 2);
+    public static readonly Identity RedInfantry1 = new(Camp.Red, 3);
+    public static readonly Identity RedInfantry2 = new(Camp.Red, 4);
+    public static readonly Identity RedInfantry3 = new(Camp.Red, 5);
+    public static readonly Identity RedAerial = new(Camp.Red, 6);
+    public static readonly Identity RedSentry = new(Camp.Red, 7);
+    public static readonly Identity RedOutpost = new(Camp.Red, 8);
+    public static readonly Identity RedBase = new(Camp.Red, 9);
 
-    public static readonly Identity BlueHero = new Identity(Camp.Blue, 1);
-    public static readonly Identity BlueEngineer = new Identity(Camp.Blue, 2);
-    public static readonly Identity BlueInfantry1 = new Identity(Camp.Blue, 3);
-    public static readonly Identity BlueInfantry2 = new Identity(Camp.Blue, 4);
-    public static readonly Identity BlueInfantry3 = new Identity(Camp.Blue, 5);
-    public static readonly Identity BlueAerial = new Identity(Camp.Blue, 6);
-    public static readonly Identity BlueSentry = new Identity(Camp.Blue, 7);
-    public static readonly Identity BlueOutpost = new Identity(Camp.Blue, 8);
-    public static readonly Identity BlueBase = new Identity(Camp.Blue, 9);
+    public static readonly Identity BlueHero = new(Camp.Blue, 1);
+    public static readonly Identity BlueEngineer = new(Camp.Blue, 2);
+    public static readonly Identity BlueInfantry1 = new(Camp.Blue, 3);
+    public static readonly Identity BlueInfantry2 = new(Camp.Blue, 4);
+    public static readonly Identity BlueInfantry3 = new(Camp.Blue, 5);
+    public static readonly Identity BlueAerial = new(Camp.Blue, 6);
+    public static readonly Identity BlueSentry = new(Camp.Blue, 7);
+    public static readonly Identity BlueOutpost = new(Camp.Blue, 8);
+    public static readonly Identity BlueBase = new(Camp.Blue, 9);
 
-    public static readonly Identity Spectator = new Identity(Camp.Spectator, 1);
-    public static readonly Identity Server = new Identity(Camp.Judge, 0);
-    public static readonly Identity Judge1 = new Identity(Camp.Judge, 1);
-    public static readonly Identity Judge2 = new Identity(Camp.Judge, 2);
-    public static readonly Identity Judge3 = new Identity(Camp.Judge, 3);
+    public static readonly Identity Spectator = new(Camp.Spectator, 1);
+    public static readonly Identity Server = new(Camp.Judge, 0);
+    public static readonly Identity Judge1 = new(Camp.Judge, 1);
+    public static readonly Identity Judge2 = new(Camp.Judge, 2);
+    public static readonly Identity Judge3 = new(Camp.Judge, 3);
+    private readonly byte _data;
+
+    private Identity(byte data)
+    {
+        _data = data;
+    }
+
+    public Identity(Camp camp, ushort id) : this((byte)(((byte)camp << 6) | (id & 0x3F)))
+    {
+    }
+
+    public Camp Camp => (Camp)(_data >> 6);
+    public ushort Id => (ushort)(_data & 0x3F);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override string ToString() => IdentityExtensions.ToString(this);
+    public override string ToString()
+    {
+        return IdentityExtensions.ToString(this);
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool TryParse(string str, out Identity identity) =>
-        IdentityExtensions.TryParse(str, out identity);
+    public static bool TryParse(string str, out Identity identity)
+    {
+        return IdentityExtensions.TryParse(str, out identity);
+    }
 }
 
 public static class IdentityExtensions
 {
-    private static readonly Dictionary<Identity, string> ToStringCache =
-        new Dictionary<Identity, string>();
+    private static readonly Dictionary<Identity, string> ToStringCache = new();
 
-    private static readonly Dictionary<Identity, string> ShortDescribeCache =
-        new Dictionary<Identity, string>();
+    private static readonly Dictionary<Identity, string> ShortDescribeCache = new();
 
-    private static readonly Dictionary<Identity, string> DescribeCache =
-        new Dictionary<Identity, string>();
+    private static readonly Dictionary<Identity, string> DescribeCache = new();
 
     private static string SToString(Camp camp, ushort id)
     {
@@ -179,10 +181,7 @@ public static class IdentityExtensions
 
     public static string Describe(this Identity identity)
     {
-        if (identity == default)
-        {
-            return "None";
-        }
+        if (identity == default) return "None";
 
         if (!DescribeCache.TryGetValue(identity, out var result))
         {
@@ -196,10 +195,7 @@ public static class IdentityExtensions
     public static bool TryParse(string str, out Identity identity)
     {
         identity = default;
-        if (str.Length < 2)
-        {
-            return false;
-        }
+        if (str.Length < 2) return false;
 
         str = str.ToLower();
 
@@ -209,13 +205,10 @@ public static class IdentityExtensions
             'b' => Camp.Blue,
             'j' => Camp.Judge,
             's' => Camp.Spectator,
-            _ => Camp.Spectator,
+            _ => Camp.Spectator
         };
 
-        if (!ushort.TryParse(str[1..], out var id))
-        {
-            return false;
-        }
+        if (!ushort.TryParse(str[1..], out var id)) return false;
 
         identity = new Identity(camp, id);
         return true;
@@ -281,7 +274,7 @@ public static class IdentityExtensions
         {
             Camp.Red => Camp.Blue,
             Camp.Blue => Camp.Red,
-            _ => Camp.Spectator,
+            _ => Camp.Spectator
         };
     }
 }
@@ -291,7 +284,7 @@ public enum Camp : byte
     Spectator,
     Red,
     Blue,
-    Judge,
+    Judge
 }
 
 [Serializable]

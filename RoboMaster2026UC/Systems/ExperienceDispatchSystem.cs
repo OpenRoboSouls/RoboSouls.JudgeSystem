@@ -10,7 +10,7 @@ using VitalRouter;
 namespace RoboSouls.JudgeSystem.RoboMaster2026UC.Systems;
 
 /// <summary>
-/// 经验值分发系统
+///     经验值分发系统
 /// </summary>
 [Routes]
 public sealed partial class ExperienceDispatchSystem(
@@ -28,9 +28,9 @@ public sealed partial class ExperienceDispatchSystem(
     }
 
     /// <summary>
-    /// 发射弹丸
-    ///  步兵机器人：每发射 1 发弹丸，获得 1 点经验
-    ///  英雄机器人：每发射 1 发弹丸，获得 10 点经验
+    ///     发射弹丸
+    ///      步兵机器人：每发射 1 发弹丸，获得 1 点经验
+    ///      英雄机器人：每发射 1 发弹丸，获得 10 点经验
     /// </summary>
     /// <param name="shooter"></param>
     /// <param name="amount"></param>
@@ -41,17 +41,12 @@ public sealed partial class ExperienceDispatchSystem(
             return;
 
         if (command.Shooter is Hero h)
-        {
             experienceSystem.AddExp(h, command.Amount * 10);
-        }
-        else if (command.Shooter is Infantry r)
-        {
-            experienceSystem.AddExp(r, command.Amount);
-        }
+        else if (command.Shooter is Infantry r) experienceSystem.AddExp(r, command.Amount);
     }
 
     /// <summary>
-    /// 造成攻击伤害
+    ///     造成攻击伤害
     /// </summary>
     /// <param name="damageCommand"></param>
     [Route]
@@ -64,39 +59,30 @@ public sealed partial class ExperienceDispatchSystem(
 
         var deltaExp = 0;
         // 对机器人造成攻击伤害，每造成 1 点伤害，攻击方获得 4 点经验
-        if (damageCommand.Victim is IRobot)
-        {
-            deltaExp = (int)(damageCommand.Damage * 4);
-        }
-            
+        if (damageCommand.Victim is IRobot) deltaExp = (int)(damageCommand.Damage * 4);
+
         // 对前哨站装甲模块造成攻击伤害： 每造成 1 点伤害，攻击方获得 2 点经验
-        if (damageCommand.Victim is Outpost)
-        {
-            deltaExp = (int)(damageCommand.Damage * 2);
-        }
-            
+        if (damageCommand.Victim is Outpost) deltaExp = (int)(damageCommand.Damage * 2);
+
         // 对基地装甲模块造成攻击伤害： 每造成 2 点伤害，攻击方获得 1 点经验
-        if (damageCommand.Victim is Base)
-        {
-            deltaExp = (int)(damageCommand.Damage / 2);
-        }
+        if (damageCommand.Victim is Base) deltaExp = (int)(damageCommand.Damage / 2);
 
         experienceSystem.AddExp(shooter, deltaExp);
     }
 
     /// <summary>
-    /// 若存在击毁者且击毁者可以获取经验：
-    ///  当被击毁者等级大于等于击毁者等级时，经验计算方式如下：
-    /// 击毁者所获得的经验=50*被击毁者等级*（1+0.2*被击毁者与击毁者等
+    ///     若存在击毁者且击毁者可以获取经验：
+    ///      当被击毁者等级大于等于击毁者等级时，经验计算方式如下：
+    ///     击毁者所获得的经验=50*被击毁者等级*（1+0.2*被击毁者与击毁者等
     ///     级差）
-    ///  当被击毁者等级小于击毁者等级时，被击毁者与击毁者等级差视为 0，
-    /// 经验计算方式如下：
-    /// 击毁者所获得的经验=50*被击毁者等级
-    ///  若裁判系统未检测到击毁者或击毁者不能获取经验：
-    /// 击毁者等级视为另一方存活英雄、 步兵、空中机器人的平均经验所对应的等级。
-    /// 按照上文中公式计算经验后，平分给另一方存活的英雄、 步兵、空中机器人，平
+    ///      当被击毁者等级小于击毁者等级时，被击毁者与击毁者等级差视为 0，
+    ///     经验计算方式如下：
+    ///     击毁者所获得的经验=50*被击毁者等级
+    ///      若裁判系统未检测到击毁者或击毁者不能获取经验：
+    ///     击毁者等级视为另一方存活英雄、 步兵、空中机器人的平均经验所对应的等级。
+    ///     按照上文中公式计算经验后，平分给另一方存活的英雄、 步兵、空中机器人，平
     ///     均经验取整数值。
-    /// 机器人因装甲模块被攻击外的其他原因导致变为战亡、异常离线或裁判系统无法
+    ///     机器人因装甲模块被攻击外的其他原因导致变为战亡、异常离线或裁判系统无法
     ///     检测到击毁者时，均视为找不到击毁者。
     /// </summary>
     /// <param name="evt"></param>
@@ -112,7 +98,7 @@ public sealed partial class ExperienceDispatchSystem(
         if (killer is IExperienced ke)
         {
             var killerLevel = performanceSystem.GetLevel(ke);
-                
+
             experienceSystem.AddExp(ke, CalcExpGained(victimLevel, killerLevel));
         }
         else
@@ -123,11 +109,8 @@ public sealed partial class ExperienceDispatchSystem(
             var averageExp = averageRobots.Average(r => r.Experience);
             var killerLevel = RM2026ucPerformanceSystem.GetLevel((int)Math.Round(averageExp));
             var exp = CalcExpGained(victimLevel, killerLevel) / averageRobots.Length;
-                
-            foreach (var robot in averageRobots)
-            {
-                experienceSystem.AddExp(robot, exp);
-            }
+
+            foreach (var robot in averageRobots) experienceSystem.AddExp(robot, exp);
         }
     }
 
@@ -135,14 +118,10 @@ public sealed partial class ExperienceDispatchSystem(
     {
         float expGained = 0;
         if (victimLevel >= killerLevel)
-        {
             expGained = 50f * victimLevel * (1f + 0.2f * (victimLevel - killerLevel));
-        }
         else
-        {
             expGained = 50f * victimLevel;
-        }
-            
+
         return (int)MathF.Round(expGained);
     }
 

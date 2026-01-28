@@ -5,7 +5,7 @@ using RoboSouls.JudgeSystem.RoboMaster2025UC.Systems;
 namespace RoboSouls.JudgeSystem.RoboMaster2025UC.Events;
 
 /// <summary>
-/// 能量机关开始
+///     能量机关开始
 /// </summary>
 public readonly struct PowerRuneStartEvent
     : IJudgeSystemEvent<PowerRuneStartEvent>,
@@ -55,7 +55,7 @@ public readonly struct PowerRuneStartEvent
 }
 
 /// <summary>
-/// 能量机关激活完成
+///     能量机关激活完成
 /// </summary>
 public readonly struct PowerRuneActivatedEvent
     : IJudgeSystemEvent<PowerRuneActivatedEvent>,
@@ -105,7 +105,7 @@ public readonly struct PowerRuneActivatedEvent
 }
 
 /// <summary>
-/// 能量机关被动停止
+///     能量机关被动停止
 /// </summary>
 public readonly struct PowerRuneStopEvent
     : IJudgeSystemEvent<PowerRuneStopEvent>,

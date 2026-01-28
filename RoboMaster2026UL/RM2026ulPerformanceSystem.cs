@@ -11,8 +11,8 @@ public sealed class RM2026ulPerformanceSystem : PerformanceSystemBase
 
     public const int MaxPowerFallback = 70;
     public const int MaxHealthFallback = 200;
-        
-        
+
+
     private const int HeroMaxBulletSpeed = 16;
     private const int InfantryMaxBulletSpeed = 25;
 
@@ -20,7 +20,7 @@ public sealed class RM2026ulPerformanceSystem : PerformanceSystemBase
     private const int SentryMaxHealth = 400;
     private const int SentryMaxHeat = 260;
     private const int SentryCooldown = 30;
-        
+
     public const int HeroMaxPower = 100;
     public const int HeroMaxHealth = 350;
     public const int HeroMaxHeat = 200;
@@ -28,13 +28,19 @@ public sealed class RM2026ulPerformanceSystem : PerformanceSystemBase
 
     // 功率优先
     public const int InfantryMaxPowerPowerPriority = 90;
+
     public const int InfantryMaxHealthPowerPriority = 200;
+
     // 血量优先
     public const int InfantryMaxPowerHealthPriority = 75;
+
     public const int InfantryMaxHealthHealthPriority = 350;
+
     // 爆发优先
     public const int InfantryMaxHeatBurst = 230;
+
     public const int InfantryCooldownBurst = 14;
+
     // 冷却优先
     public const int InfantryMaxHeatCooldown = 88;
     public const int InfantryCooldownCooldown = 24;
@@ -49,7 +55,7 @@ public sealed class RM2026ulPerformanceSystem : PerformanceSystemBase
             JudgeSystemStage.Countdown => 5,
             JudgeSystemStage.Match => 5 * 60,
             JudgeSystemStage.Settlement => 10,
-            _ => throw new ArgumentOutOfRangeException(nameof(stage), stage, null),
+            _ => throw new ArgumentOutOfRangeException(nameof(stage), stage, null)
         };
     }
 
@@ -72,10 +78,10 @@ public sealed class RM2026ulPerformanceSystem : PerformanceSystemBase
     {
         if (chassisd is Sentry)
             return SentryMaxPower;
-            
+
         if (chassisd is Hero)
             return HeroMaxPower;
-            
+
         if (chassisd is not Infantry)
             return MaxPowerFallback;
 
@@ -83,7 +89,7 @@ public sealed class RM2026ulPerformanceSystem : PerformanceSystemBase
         {
             ChassisTypePower => InfantryMaxPowerPowerPriority,
             ChassisTypeHealth => InfantryMaxPowerHealthPriority,
-            _ => MaxPowerFallback,
+            _ => MaxPowerFallback
         };
     }
 
@@ -91,10 +97,10 @@ public sealed class RM2026ulPerformanceSystem : PerformanceSystemBase
     {
         if (chassisd is Sentry)
             return SentryMaxPower;
-            
+
         if (chassisd is Hero)
             return HeroMaxPower;
-            
+
         if (chassisd is not Infantry)
             return MaxPowerFallback;
 
@@ -102,31 +108,28 @@ public sealed class RM2026ulPerformanceSystem : PerformanceSystemBase
         {
             ChassisTypePower => InfantryMaxPowerPowerPriority,
             ChassisTypeHealth => InfantryMaxPowerHealthPriority,
-            _ => MaxPowerFallback,
+            _ => MaxPowerFallback
         };
     }
 
     public override uint GetMaxHealth(IHealthed healthed, int level = -1)
     {
-        if (level == -1 && healthed is IExperienced exp)
-        {
-            level = GetLevel(exp);
-        }
+        if (level == -1 && healthed is IExperienced exp) level = GetLevel(exp);
 
         if (healthed is Sentry)
             return SentryMaxHealth;
-            
+
         if (healthed is Hero)
             return HeroMaxHealth;
-            
+
         if (healthed is not Infantry inf)
             return MaxHealthFallback;
-            
+
         return inf.ChassisType switch
         {
             ChassisTypePower => InfantryMaxHealthPowerPriority,
             ChassisTypeHealth => InfantryMaxHealthHealthPriority,
-            _ => (uint)MaxHealthFallback,
+            _ => (uint)MaxHealthFallback
         };
     }
 
@@ -138,12 +141,12 @@ public sealed class RM2026ulPerformanceSystem : PerformanceSystemBase
             return HeroMaxHeat;
         if (shooter is not Infantry inf)
             return 0;
-            
+
         return inf.GunType switch
         {
             GunType17mmBurst => InfantryMaxHeatBurst,
             GunType42mmDefault => InfantryMaxHeatCooldown,
-            _ => 0,
+            _ => 0
         };
     }
 
@@ -153,7 +156,7 @@ public sealed class RM2026ulPerformanceSystem : PerformanceSystemBase
         {
             AmmoType42mm => 100,
             AmmoType17mm => 10,
-            _ => 0,
+            _ => 0
         };
     }
 
@@ -165,12 +168,12 @@ public sealed class RM2026ulPerformanceSystem : PerformanceSystemBase
             return HeroCooldown;
         if (shooter is not Infantry inf)
             return 0;
-            
+
         return inf.GunType switch
         {
             GunType17mmBurst => InfantryCooldownBurst,
             GunType42mmDefault => InfantryCooldownCooldown,
-            _ => 0,
+            _ => 0
         };
     }
 
