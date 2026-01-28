@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using RoboSouls.JudgeSystem.Attributes;
+using RoboSouls.JudgeSystem.Entities;
 using RoboSouls.JudgeSystem.Events;
 using RoboSouls.JudgeSystem.RoboMaster2026UC.Entities;
 using RoboSouls.JudgeSystem.RoboMaster2026UC.Events;
@@ -149,8 +151,16 @@ public sealed partial class OutpostSystem(
             return;
         if (evt.OperatorId.Camp != evt.ZoneId.Camp)
             return;
-        if (IsOutpostZoneDeactivated(evt.ZoneId.Camp))
+        if (IsOutpostDestroyed(evt.OperatorId.Camp, out _))
+        {
+            buffSystem.AddBuff(evt.OperatorId, RM2026ucBuffs.RebuildingOutpost, timeSystem.TimeAsFloat, TimeSpan.MaxValue);
             return;
+        } 
+        
+        if (GetOutpostZoneDeactivated(evt.OperatorId.Camp))
+        {
+            return;
+        }
 
         var cooldownBuffValue = timeSystem.StageTimeElapsed switch
         {
@@ -179,6 +189,8 @@ public sealed partial class OutpostSystem(
             return;
         if (evt.OperatorId.Camp != evt.ZoneId.Camp)
             return;
+        
+        buffSystem.RemoveBuff(evt.OperatorId, RM2026ucBuffs.RebuildingOutpost);
 
         if (timeSystem.Stage == JudgeSystemStage.Match)
         {
@@ -186,27 +198,19 @@ public sealed partial class OutpostSystem(
         }
     }
 
-    public bool IsOutpostZoneDeactivated(Camp camp)
-    {
-        var id = camp == Camp.Red ? RedOutpostZoneId : BlueOutpostZoneId;
-        return boolCacheBox
-            .WithReaderNamespace(id) 
-            .TryLoad(OutpostZoneDeactivatedCacheKey, out var deactivated) && deactivated;
-    }
+    [Property(nameof(boolCacheBox), PropertyStorageMode.Camp)]
+    public partial bool OutpostZoneDeactivated { get; internal set; }
 
-    internal void SetOutpostZoneDeactivated(Camp camp, bool deactivated)
+    public bool IsOutpostDestroyed(Camp camp, out Outpost outpost)
     {
-        var id = camp == Camp.Red ? RedOutpostZoneId : BlueOutpostZoneId;
-        boolCacheBox.WithWriterNamespace(id).Save(OutpostZoneDeactivatedCacheKey, deactivated);
-    }
+        var id = camp switch
+        {
+            Camp.Red => Identity.RedOutpost,
+            Camp.Blue => Identity.BlueOutpost,
+            _ => throw new ArgumentOutOfRangeException(nameof(camp), "red or blue")
+        };
+        outpost = (Outpost)entitySystem.Entities[id];
 
-    /// <summary>
-    /// 重建前哨站
-    /// </summary>
-    /// <param name="camp"></param>
-    public void Rebuild(Camp camp)
-    {
-        var o = entitySystem.Entities[camp == Camp.Red ? Identity.RedOutpost : Identity.BlueOutpost] as Outpost;
-        lifeSystem.IncreaseHealth(o, 750);
+        return outpost.IsDead();
     }
 }

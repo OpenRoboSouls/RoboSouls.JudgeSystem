@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using RoboSouls.JudgeSystem.Attributes;
 using RoboSouls.JudgeSystem.Entities;
 using RoboSouls.JudgeSystem.Events;
 using RoboSouls.JudgeSystem.RoboMaster2026UC.Entities;
@@ -35,9 +36,9 @@ public sealed partial class BattleSystem(
     {
         MapTo(router);
     }
-
-    private static readonly int RedDamageSumCacheKey = "RedDamageSum".GetHashCode();
-    private static readonly int BlueDamageSumCacheKey = "BlueDamageSum".GetHashCode();
+    
+    [Property(nameof(uintCacheBox), PropertyStorageMode.Camp)]
+    public partial uint DamageSum { get; internal set; }
 
     public Task Reset(CancellationToken cancellation = new CancellationToken())
     {
@@ -286,7 +287,7 @@ public sealed partial class BattleSystem(
         }
 
         // damage sum
-        AddDamageSum(attacker.Camp, damage);
+        SetDamageSum(attacker.Camp, GetDamageSum(attacker.Camp)+damage);
     }
 
     [Route]
@@ -327,7 +328,7 @@ public sealed partial class BattleSystem(
 
             damage = lifeSystem.DecreaseHealth(outpost, dartStationId, damage);
 
-            AddDamageSum(outpostId.Camp, damage);
+            SetDamageSum(outpostId.Camp, GetDamageSum(outpostId.Camp)+damage);
         }
         else
         {
@@ -360,7 +361,7 @@ public sealed partial class BattleSystem(
 
             damage = lifeSystem.DecreaseHealth(b, dartStationId, damage);
 
-            AddDamageSum(baseId.Camp, damage);
+            SetDamageSum(baseId.Camp, GetDamageSum(baseId.Camp)+damage);
         }
     }
 
@@ -400,20 +401,5 @@ public sealed partial class BattleSystem(
         var q0 = performanceSystem.GetMaxHeat(shooter);
 
         floatCacheBox.WithWriterNamespace(shooter.Id).Save(IShooter.HeatCacheKey, q1);
-    }
-
-    public uint GetDamageSum(Camp camp)
-    {
-        return uintCacheBox.Load(
-            camp == Camp.Red ? RedDamageSumCacheKey : BlueDamageSumCacheKey
-        );
-    }
-
-    internal void AddDamageSum(Camp camp, uint damage)
-    {
-        uintCacheBox.Save(
-            camp == Camp.Red ? RedDamageSumCacheKey : BlueDamageSumCacheKey,
-            GetDamageSum(camp) + damage
-        );
     }
 }

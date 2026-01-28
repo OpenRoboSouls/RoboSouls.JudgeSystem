@@ -561,7 +561,7 @@ public sealed partial class DartSystem(
                     {
                         var damage = (uint)(performanceSystem.GetMaxHealth(r) * 0.25);
                         lifeSystem.DecreaseHealth(r, dartStationId, damage);
-                        battleSystem.AddDamageSum(e.Camp, damage);
+                        battleSystem.SetDamageSum(e.Camp, battleSystem.GetDamageSum(e.Camp)+damage);
 
                         return Task.CompletedTask;
                     })

@@ -25,6 +25,9 @@ public sealed partial class BaseSystem(
     BuffSystem buffSystem,
     ITimeSystem timeSystem,
     JudgeBotSystem judgeBotSystem,
+    ICacheProvider<int> intCacheBox,
+    OutpostSystem outpostSystem,
+    ILogger logger,
     ZoneSystem zoneSystem)
     : ISystem
 {
@@ -43,9 +46,13 @@ public sealed partial class BaseSystem(
     /// 蓝方基地增益点
     /// </summary>
     public static readonly Identity BlueBaseZoneId = new Identity(Camp.Blue, 50);
-
-    [Hashed]
-    private static partial int BaseZoneDeactivatedCacheKey { get; }
+    
+    [Property(nameof(boolCacheBox), PropertyStorageMode.Camp)]
+    public partial bool BaseZoneDeactivated
+    {
+        get;
+        private set;
+    }
 
     public Task Reset(CancellationToken cancellation = new CancellationToken())
     {
@@ -74,6 +81,8 @@ public sealed partial class BaseSystem(
                 FalseStartDetectLoop(Camp.Blue)
             );
         }
+        
+        timeSystem.RegisterRepeatAction(1, () => Task.WhenAll(RebuildOutpostDetect(Camp.Blue), RebuildOutpostDetect(Camp.Red)));
 
         return Task.CompletedTask;
     }
@@ -148,7 +157,7 @@ public sealed partial class BaseSystem(
             return;
         if (evt.OperatorId.Camp != evt.ZoneId.Camp)
             return;
-        if (IsBaseZoneDeactivated(evt.ZoneId.Camp))
+        if (GetBaseZoneDeactivated(evt.ZoneId.Camp))
             return;
 
         buffSystem.AddBuff(evt.OperatorId, Buffs.DefenceBuff, 0.5f, TimeSpan.MaxValue);
@@ -229,23 +238,130 @@ public sealed partial class BaseSystem(
         publisher.PublishAsync(new BaseArmorOpenEvent(b.Id));
     }
 
-    public bool IsBaseZoneDeactivated(Camp camp)
-    {
-        var id = camp == Camp.Red ? RedBaseZoneId : BlueBaseZoneId;
-        return boolCacheBox
-            .WithReaderNamespace(id)
-            .TryLoad(BaseZoneDeactivatedCacheKey, out var deactivated) && deactivated;
-    }
-
-    private void SetBaseZoneDeactivated(Camp camp, bool deactivated)
-    {
-        var id = camp == Camp.Red ? RedBaseZoneId : BlueBaseZoneId;
-        boolCacheBox.WithWriterNamespace(id).Save(BaseZoneDeactivatedCacheKey, deactivated);
-    }
-
     public void AddHealth(Camp camp, uint amount)
     {
         var b = entitySystem.Entities[camp == Camp.Red ? Identity.RedBase : Identity.BlueBase] as Base;
         lifeSystem.IncreaseHealth(b, amount);
+    }
+    
+    /// <summary>
+    /// 基地承受的总伤害值
+    /// </summary>
+    /// <returns></returns>
+    [Property(nameof(intCacheBox), PropertyStorageMode.Camp)]
+    public partial int BaseTotalDamage { get; private set; }
+    
+    
+    
+    /// <summary>
+    /// 已获得重建前哨站次数
+    /// </summary>
+    /// <param name="camp"></param>
+    /// <returns></returns>
+    public int GetRebuildOutpostCountTotal(Camp camp)
+    {
+        if (timeSystem.Stage != JudgeSystemStage.Match)
+        {
+            return 0;
+        }
+        if (timeSystem.StageTimeElapsed >= 300)
+        {
+            return 0;
+        }
+        
+        return GetBaseTotalDamage(camp) / 1000;
+    }
+    
+    /// <summary>
+    /// 已使用重建前哨站次数
+    /// </summary>
+    [Property(nameof(intCacheBox), PropertyStorageMode.Camp)]
+    public partial int OutpostRebuildCountUsed { get; private set; }
+
+    public int GetOutpostBuildCountRemaining(Camp camp)
+    {
+        var total = GetRebuildOutpostCountTotal(camp);
+        if (total <= 0)
+        {
+            return 0;
+        }
+
+        return Math.Max(0, total - GetOutpostRebuildCountUsed(camp));
+    }
+
+    /// <summary>
+    /// 一方每累计损失 1000 点基地血量，获得 1 次可积累的“重建前哨站“机会。 英雄、步兵、哨兵机器人通
+    ///过连续检测己方前哨站增益点场地交互模块卡 10 秒，或工程机器人连续检测己方前哨站增益点场地交互
+    ///    模块卡 5 秒（不同机器人占领时长独立计算），即可“重建” 被击毁的前哨站，使前哨站恢复存活状态并
+    ///    具有 750 点血量。在比赛开始 5 分钟后，前哨站不能够再被重建。
+    /// </summary>
+    /// <returns></returns>
+    public bool TryRebuildOutpost(Camp camp)
+    {
+        if (!outpostSystem.IsOutpostDestroyed(camp, out var outpost))
+        {
+            return false;
+        }
+        
+        if (GetOutpostBuildCountRemaining(camp) <= 0)
+        {
+            return false;
+        }
+        
+        lifeSystem.IncreaseHealth(outpost, 750);
+        
+        SetOutpostRebuildCountUsed(camp, GetOutpostRebuildCountUsed(camp)+1);
+        logger.Info($"{camp} rebuilt outpost");
+        return true;
+    }
+
+    private Task RebuildOutpostDetect(Camp camp)
+    {
+        if (timeSystem.Stage != JudgeSystemStage.Match) return Task.CompletedTask;
+
+        var robots = entitySystem
+            .Entities.Values.OfType<IHealthed>()
+            .Where(i => !i.IsDead())
+            .OfType<IRobot>()
+            .Select(r => r.Id)
+            .Where(i => i.Camp == camp)
+            .Where(i => entitySystem.HasOperator(i));
+
+        return Task.WhenAll(robots.Select(RebuildOutpostDetectLoopFor));
+    }
+
+    private Task RebuildOutpostDetectLoopFor(Identity id)
+    {
+        if (!outpostSystem.IsOutpostDestroyed(id.Camp, out _))
+        {
+            return Task.CompletedTask;
+        }
+        
+        if (!buffSystem.TryGetBuff(id, RM2026ucBuffs.RebuildingOutpost, out float startTime))
+        {
+            return Task.CompletedTask;
+        }
+
+        var duration = timeSystem.TimeAsFloat - startTime;
+        float threshold;
+        if (id.IsHero() || id.IsInfantry() || id.IsSentry())
+        {
+            threshold = 10;
+        } else if (id.IsEngineer())
+        {
+            threshold = 5;
+        }
+        else
+        {
+            return Task.CompletedTask;
+        }
+
+        if (duration < threshold)
+        {
+            return Task.CompletedTask;
+        }
+
+        TryRebuildOutpost(id.Camp);
+        return Task.CompletedTask;
     }
 }

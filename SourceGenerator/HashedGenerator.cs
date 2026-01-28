@@ -113,6 +113,6 @@ public class HashedGenerator: IIncrementalGenerator
                      }
                      """;
 
-        spc.AddSource(value.ClassName + ".g.cs", code);
+        spc.AddSource($"{value.ClassName}.{value.PropertyName}.g.cs", code);
     }
 }
